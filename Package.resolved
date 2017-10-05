@@ -1,0 +1,34 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Uridium",
+        "repositoryURL": "https://github.com/aestesis/Uridium.git",
+        "state": {
+          "branch": null,
+          "revision": "1969d4c66a60054201b4999c89700f259e4e2193",
+          "version": "0.0.1"
+        }
+      },
+      {
+        "package": "Vulkan",
+        "repositoryURL": "https://github.com/aestesis/Vulkan.git",
+        "state": {
+          "branch": null,
+          "revision": "e505168e78901ae82e49793452f18995687e090a",
+          "version": "1.0.2"
+        }
+      },
+      {
+        "package": "X11",
+        "repositoryURL": "https://github.com/aestesis/X11.git",
+        "state": {
+          "branch": null,
+          "revision": "82d107337341081ab056729e25da97c6c08b58a6",
+          "version": "1.0.2"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
