@@ -1,3 +1,3 @@
 struct Aether {
-    var text = "Hello, World!"
+    var text = "Hello, Worldz!"
 }

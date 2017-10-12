@@ -8,7 +8,7 @@ let package = Package(
         .library(name: "Aether",targets: ["Aether"])
     ],
     dependencies: [
-        .package(url: "https://github.com/aestesis/Uridium.git", from:"0.0.1")
+        .package(url: "https://github.com/aestesis/Uridium.git", from:"0.0.3")
     ],
     targets: [
         .target(name: "Aether",dependencies: []),
