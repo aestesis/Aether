@@ -104,7 +104,7 @@ public class Device {
             return Double(NSAppKitVersion.current.rawValue)
         #else
             Debug.notImplemented()
-            return "undefined"
+            return 0
         #endif
     }
     public static var orientation:Orientation {

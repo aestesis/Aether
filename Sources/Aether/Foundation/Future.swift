@@ -88,7 +88,7 @@ public class Future : Atom {
             }
         }
     }
-    public func error(_ error:Alib.Error,_ f:String=#file,_ l:Int=#line) {
+    public func error(_ error:Error,_ f:String=#file,_ l:Int=#line) {
         if state == .inProgress {
             self.result=Error(error,f,l)
             state = .error

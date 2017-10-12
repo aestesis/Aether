@@ -25,9 +25,7 @@ import Foundation
     import MetalKit
 #else
     import Dispatch
-    import X11.X
-    import X11.Xlib
-    import Vulkan
+    import Uridium
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

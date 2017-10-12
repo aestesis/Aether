@@ -1,0 +1,2 @@
+clear
+swift build

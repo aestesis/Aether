@@ -18,11 +18,13 @@
 //  limitations under the License.
 
 import Foundation
+import SwiftyJSON
 
 #if os(macOS)
     import AppKit
 #elseif os(iOS) || os(tvOS)
     import UIKit
+#elseif os(Linux)
 #endif
 
 public class Application {
