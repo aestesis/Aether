@@ -1,6 +1,6 @@
 //
 //  Stream.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 31/03/2016.
 //  Copyright © 2016 aestesis. All rights reserved.
@@ -487,21 +487,21 @@ public class DataReader : Stream {
 #else
 public class FileReader : Stream {
     let filename:String
-    var file:UnsafeMutablePointer<FILE>
+    var file:UnsafeMutablePointer<FILE>!
     let size:Int
     var read:Int=0
     public override var available:Int {
         return size-read
     }
     public override func read(_ desired:Int) -> [UInt8]? {
-        var data=[UInt8](count:desired, repeatedValue:0)
-        let n=fread(UnsafeMutablePointer(data),1,desired,file)
+        var data=[UInt8](repeating:0, count:desired)
+        let n=fread(&data,1,desired,file)
         if n>0 {
             read += n
             if read<size {
                 wait(0.001).then { _ in
                     if self.read<self.size {
-                        self.onData.dispatch()
+                        self.onData.dispatch(())
                     }
                 }
             } else if read == size {
@@ -512,13 +512,13 @@ public class FileReader : Stream {
             if n==desired {
                 return data
             }
-            data.removeRange(n..<desired)
+            data.removeSubrange(n..<desired)
             return data
         }
         return nil
     }
     public override func close() {
-        if file != nil {
+        if file != nil  {
             fclose(file)
             file = nil
         }
@@ -534,19 +534,20 @@ public class FileReader : Stream {
         super.init(timeout:timeout,data:data,error:error)
         wait(0.001).then { _ in
             if self.read<self.size {
-                self.onData.dispatch()
+                self.onData.dispatch(())
             }
         }
     }
 }
 public class FileWriter : Stream {
     let filename:String
-    let file:UnsafeMutablePointer<FILE>
+    let file:UnsafeMutablePointer<FILE>!
     public override func write(_ data:[UInt8],offset:Int,count:Int) -> Int {
-        return fwrite(UnsafePointer<Int8>(data).advancedBy(offset), 1, count, file)
+        return fwrite(UnsafePointer<UInt8>(data)!.advanced(by:offset), 1, count, file)
     }
     public override func close() {
         fclose(file)
+        super.close()
     }
     init(filename:String,timeout:Double=5,data:(()->())?=nil,error:((Error)->())?=nil) {
         self.filename=filename

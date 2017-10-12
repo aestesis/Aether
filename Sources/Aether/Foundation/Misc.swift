@@ -1,6 +1,6 @@
 //
 //  Misc.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 22/02/2016.
 //  Copyright © 2016 aestesis. All rights reserved.
@@ -20,6 +20,7 @@
 import Foundation
 import SwiftyJSON
 
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -36,7 +37,11 @@ public class Misc {
         let data:String="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         var id:String="";
         for _ in 1...12 {
-            let n:Int=Int(arc4random_uniform(UInt32(UInt(data.characters.count))))
+            #if os(macOS) || os(iOS) || os(tvOS)
+                let n:Int=Int(arc4random_uniform(UInt32(UInt(data.characters.count))))
+            #else
+                let n:Int=Int(rand())%data.characters.count
+            #endif
             id+=data[n];
         }
         return id;
@@ -86,7 +91,11 @@ public class Misc {
         return r.trim()
     }
     public static var rnd:Double {
-        return Double(arc4random_uniform(UInt32.max))/Double(UInt32.max)
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Double(arc4random_uniform(UInt32.max))/Double(UInt32.max)
+        #else
+            return Double(rand())/Double(RAND_MAX)
+        #endif
     }
     public static var time:Double {
         return Double(Date.timeIntervalSinceReferenceDate)

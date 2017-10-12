@@ -1,6 +1,6 @@
 //
 //  Node.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 22/02/2016.
 //  Copyright © 2016 aestesis. All rights reserved.
@@ -19,7 +19,8 @@
 
 import Foundation
 #if os(Linux)
-import Dispatch
+    import Dispatch
+    import Glibc
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -413,7 +414,7 @@ open class NodeUI : Node {
         }
     }
     public func sui(_ fn:@escaping ()->()) {
-        if let isui = Alib.Thread.current["ui.thread"] as? Bool {
+        if let isui = Thread.current["ui.thread"] as? Bool {
             if isui {
                 fn()
             } else {
@@ -580,6 +581,7 @@ public class Event<T> {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if os(macOS) || os(iOS) || os(tvOS)
 public class Lock {
     public func synced(_ execute: () -> ()) {
         objc_sync_enter(self)
@@ -589,27 +591,64 @@ public class Lock {
     public init() {
     }
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class Timer : NSObject {
-    var timer:Foundation.Timer?
-    let tick:()->()
-    init(period:Double,tick:@escaping ()->()) {
-        self.tick=tick
-        super.init()
-        timer = Foundation.Timer.scheduledTimer(timeInterval: period, target: self, selector: #selector(update), userInfo: nil, repeats: true)
-    }
-    @objc func update() {
-        tick()
-    }
-    func stop() {
-        if let t=timer {
-            t.invalidate()
+#else
+    public class Lock {
+        let queue : DispatchQueue
+        public func synced(_ execute: () -> ()) {
+            queue.sync {
+                execute()
+            }
         }
-        timer=nil
+        public init() {
+            queue = DispatchQueue(label:Misc.alphaID)
+        }
     }
-}
+#endif
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if os(macOS) || os(iOS) || os(tvOS)
+    // TODO: use only DispatchSourceTimer
+    class Timer : NSObject {
+        var timer:Foundation.Timer?
+        let tick:()->()
+        init(period:Double,tick:@escaping ()->()) {
+            self.tick=tick
+            super.init()
+            timer = Foundation.Timer.scheduledTimer(timeInterval: period, target: self, selector: #selector(update), userInfo: nil, repeats: true)
+        }
+        @objc func update() {
+            tick()
+        }
+        func stop() {
+            if let t=timer {
+                t.invalidate()
+            }
+            timer=nil
+        }
+    }
+#else
+    class Timer  {
+        var timer : DispatchSourceTimer?
+        let tick:()->()
+        init(period:Double,tick:@escaping ()->()) {
+            self.tick=tick
+            timer = DispatchSource.makeTimerSource()
+            timer?.schedule(deadline:.now(),repeating:period,leeway:.milliseconds(100))
+            timer?.setEventHandler { [weak self] in
+                self?.tick()
+            }
+            timer?.resume()
+        }
+        deinit {
+            stop()
+        }
+        func stop() {
+            timer?.cancel()
+            timer = nil
+        }
+    }
+#endif
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

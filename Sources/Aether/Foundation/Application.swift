@@ -1,6 +1,6 @@
 //
 //  Application.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 13/03/2016.
 //  Copyright © 2016 aestesis. All rights reserved.

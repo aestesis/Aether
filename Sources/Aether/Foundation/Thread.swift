@@ -1,6 +1,6 @@
 //
 //  Thread.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 03/03/2016.
 //  Copyright © 2016 aestesis. All rights reserved.
@@ -43,15 +43,11 @@ public class Thread : Atom {
     public static var callstack : [String] {
         return Foundation.Thread.callStackSymbols
     }
-    @objc func darun(_ obj:AnyObject?) {
-        if let a=obj as? Action<Void> {
-            a.invoke(())
-        }
-    }
     public init(_ fn:@escaping ()->()) {
         super.init()
-        
-        nst=Foundation.Thread(target:self, selector: #selector(darun), object:Action<Void>(fn))
+        nst=Foundation.Thread { 
+            fn()
+        }
         nst!.start()
     }
     public func cancel() {
@@ -65,12 +61,4 @@ public class Thread : Atom {
         }
         return true
     }
-    #if os(macOS) || os(iOS) || os(tvOS)
-        public var priority : Double {
-            get { return nst!.threadPriority }
-            set(p) { nst!.threadPriority = p }
-        }
-    #else
-        public var priority : Double = 0.0
-    #endif
 }
