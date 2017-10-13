@@ -2,7 +2,7 @@
 
 import PackageDescription
 
-let package = Package(swi
+let package = Package(
     name: "Aether",
     products: [
         .library(name: "Aether",targets: ["Aether"])
