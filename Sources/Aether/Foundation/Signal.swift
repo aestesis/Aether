@@ -32,7 +32,11 @@ public struct Signal {  // perfect number 0...1
         self.value = value
     }
     public static func realTime(frequency:Double,phase:Double=0) -> Signal {
-        return Signal(Darwin.sin(ß.time*frequency*ß.π*2+phase)*0.5+0.5)
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Signal(Darwin.sin(ß.time*frequency*ß.π*2+phase)*0.5+0.5)  
+        #else
+            return Signal(Glibc.sin(ß.time*frequency*ß.π*2+phase)*0.5+0.5)
+        #endif
     }
     public static func realTime(period:Double) -> Signal {
         
@@ -61,13 +65,21 @@ public struct Signal {  // perfect number 0...1
         } else {
             s = p / 2+ß.π * asin(1/a)
         }
-        return Signal(Darwin.pow(2,-10*v)*Darwin.sin((v-s)*2*ß.π/p)+1)
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Signal(Darwin.pow(2,-10*v)*Darwin.sin((v-s)*2*ß.π/p)+1)
+        #else
+            return Signal(Glibc.pow(2,-10*v)*Glibc.sin((v-s)*2*ß.π/p)+1)
+        #endif
     }
     public var exp:Signal {
         if value>=1 {
             return self
         }
-        return Signal(-Darwin.pow(2,-10*value) + 1)
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Signal(-Darwin.pow(2,-10*value) + 1)
+        #else
+            return Signal(-Glibc.pow(2,-10*value) + 1)
+        #endif
     }
     public func length(_ length:Double) -> Signal {
         return self.range(begin:0, length: length)
@@ -83,7 +95,11 @@ public struct Signal {  // perfect number 0...1
         }
     }
     public func pow(_ p:Double) -> Signal {
-        return Signal(Darwin.pow(value,p))
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Signal(Darwin.pow(value,p))
+        #else
+            return Signal(Glibc.pow(value,p))
+        #endif
     }
     public func range(begin:Double,length:Double) -> Signal {
         let v=min(max(value,begin),begin+length)
@@ -100,13 +116,21 @@ public struct Signal {  // perfect number 0...1
         return min(max(v,0),1)
     }
     public var sin : Signal {
-        return Signal(Darwin.sin(ß.π*value-ß.π2)*0.5+0.5)
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Signal(Darwin.sin(ß.π*value-ß.π2)*0.5+0.5)
+        #else
+            return Signal(Glibc.sin(ß.π*value-ß.π2)*0.5+0.5)
+        #endif
     }
     public var square : Signal {
         return Signal(value<0.5 ? 0 : 1)
     }
     public func tremolo(_ frequency:Double,amplitude:Double) -> Signal {
-        return Signal(Signal.saturate(value+Darwin.sin(rotation+frequency)*amplitude))
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Signal(Signal.saturate(value+Darwin.sin(rotation+frequency)*amplitude))
+        #else
+            return Signal(Signal.saturate(value+Glibc.sin(rotation+frequency)*amplitude))
+        #endif
     }
     public var revers : Signal {
         return Signal(1-value)
@@ -168,7 +192,11 @@ public struct Signal {  // perfect number 0...1
             let v=value-1
             return Signal(sqrt((1-v*v)))
         case .sin:
-            return Signal(Darwin.sin(value*ß.π2))
+            #if os(macOS) || os(iOS) || os(tvOS)
+                return Signal(Darwin.sin(value*ß.π2))
+            #else
+                return Signal(Glibc.sin(value*ß.π2))
+            #endif
         }
         return self
     }

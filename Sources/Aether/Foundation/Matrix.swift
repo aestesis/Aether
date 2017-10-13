@@ -17,11 +17,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 import Foundation
+import SwiftyJSON
+
 #if os(macOS) || os(iOS) || os(tvOS)
     import MetalKit
     import Accelerate
-#else
-    //import simd
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -37,7 +37,7 @@ public struct Mat4 : CustomStringConvertible,JsonConvertible {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public var infloat4x4:float4x4 {
-        return float4x4([r0.infloat4,r1.infloat4,r2.infloat4,r3.infloat4])
+        return float4x4([r0.infloat4,r1.infloat4,r2.infloat4,r3.infloat4])  // TODO: fix, as it's rows -> columns
     }
     public var indouble4x4:double4x4 {
         return double4x4([r0.indouble4,r1.indouble4,r2.indouble4,r3.indouble4])
@@ -218,10 +218,10 @@ public struct Mat4 : CustomStringConvertible,JsonConvertible {
         self.r3=Vec4(json:json["r3"])
     }
     public init(_ m:float4x4) {
-        self.init(c0:Vec4(m.columns.0),c1:Vec4(m.columns.1),c2:Vec4(m.columns.2),c3:Vec4(m.columns.3))
+        self.init(r0:Vec4(m.columns.0),r1:Vec4(m.columns.1),r2:Vec4(m.columns.2),r3:Vec4(m.columns.3))
     }
     public init(_ m:float3x3) {
-        self.init(c0:Vec4(xyz:Vec3(m.columns.0),w:0),c1:Vec4(xyz:Vec3(m.columns.1),w:0),c2:Vec4(xyz:Vec3(m.columns.2),w:0),c3:Vec4(xyz:Vec3.zero,w:1))
+        self.init(r0:Vec4(xyz:Vec3(m.columns.0),w:0),r1:Vec4(xyz:Vec3(m.columns.1),w:0),r2:Vec4(xyz:Vec3(m.columns.2),w:0),r3:Vec4(xyz:Vec3.zero,w:1))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -350,6 +350,7 @@ public func -(a:Mat4,b:Mat4)->Mat4 {
     return Mat4(r0:a.r0-b.r0,r1:a.r1-b.r1,r2:a.r2-b.r2,r3:a.r3-b.r3)
 }
 public func *(lhs:Mat4, rhs:Mat4) -> Mat4 {  // TODO: use directly lhs, rhs without copying
+    #if os(macOS) || os(iOS) || os(tvOS)
     var l = lhs
     var r = rhs
     var result = Mat4.identity
@@ -361,6 +362,11 @@ public func *(lhs:Mat4, rhs:Mat4) -> Mat4 {  // TODO: use directly lhs, rhs with
     let c = ures.assumingMemoryBound(to: Double.self)
     vDSP_mmulD(a, 1, b, 1, c, 1, 4, 4, 4)
     return result
+    #else
+    // TODO:
+    Debug.notImplemented()
+    return Mat4.identity
+    #endif
 }
 public func *(lhs:Mat4, rhs:Vec4) -> Vec4 {
     return lhs.transform(rhs)

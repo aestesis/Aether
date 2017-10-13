@@ -18,6 +18,8 @@
 //  limitations under the License.
 
 import Foundation
+import SwiftyJSON
+
 #if os(macOS) || os(iOS) || os(tvOS)
     import MetalKit
 #endif
@@ -179,6 +181,15 @@ public struct Color : CustomStringConvertible,JsonConvertible {
         self.r=Double(ns.redComponent)
         self.g=Double(ns.greenComponent)
         self.b=Double(ns.blueComponent)
+    }
+    #else
+    public init(a:Double=1,h:Double,s:Double,b:Double) {
+        self.r = 0
+        self.g = 0
+        self.b = 0
+        self.a = 0
+        Debug.notImplemented()
+        // TODO:
     }
     #endif
     public init(html:String) {

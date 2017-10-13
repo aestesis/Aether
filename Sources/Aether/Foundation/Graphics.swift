@@ -825,6 +825,7 @@ open class Graphics : NodeUI {
         renderOwner = false
         super.init(parent:parent)
     }
+    #if os(macOS) || os(iOS) || os(tvOS)
     public init(viewport:Viewport,descriptor:MTLRenderPassDescriptor,drawable:CAMetalDrawable,depth:MTLTexture?=nil,clear:Color?=nil,depthClear:Double=1.0,clip:Rect?=nil) {
         let m = Mat4.gpu(size:viewport.size)
         self.matrix=m
@@ -834,6 +835,7 @@ open class Graphics : NodeUI {
         renderOwner = true
         super.init(parent:viewport)
     }
+    #endif
     public init(image:Bitmap,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false,clip:Rect?=nil) {
         let m = Mat4.gpu(size:image.size)
         self.matrix=m

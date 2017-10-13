@@ -18,13 +18,16 @@
 //  limitations under the License.
 
 import Foundation
-import Metal
-import CoreGraphics
-// OSX, iOS, watchOS, tvOS, Linux
+
 #if os(OSX)
+    import Metal
+    import CoreGraphics
     import AppKit
-#else
+#elseif os(iOS) || os(tvOS)
+    import Metal
+    import CoreGraphics
     import UIKit
+#else
 #endif
 
 
@@ -42,7 +45,11 @@ open class Texture2D : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    #if os(macOS) || os(iOS) || os(tvOS)
     public private(set) var texture:MTLTexture?
+    #else
+    public private(set) var texture:Tin.Texture?
+    #endif
     public private(set) var pixels:Size=Size.zero
     public private(set) var pixel:Size=Size.unity
     public private(set) var border:Size=Size.zero
@@ -59,6 +66,7 @@ open class Texture2D : NodeUI {
         set(s) { pixel=Size.unity/s }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    #if os(macOS) || os(iOS) || os(tvOS)
     internal func initialize(from cg:CGImage) {
         let pixfmt = MTLPixelFormat.rgba8Unorm // (cg.colorSpace?.model == .rgb) ? MTLPixelFormat.rgba8Unorm : MTLPixelFormat.a8Unorm
         self.pixels = Size(Double(cg.width),Double(cg.height))
@@ -131,6 +139,9 @@ open class Texture2D : NodeUI {
             }
         }
     }
+    #else
+    // TODO:
+    #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     internal func load(_ filename:String) {
         #if os(iOS) || os(tvOS)
@@ -291,19 +302,21 @@ open class Texture2D : NodeUI {
         super.init(parent: parent)
         load(path)
     }
-    public init(parent:NodeUI,cg:CGImage,file:String=#file,line:Int=#line) {
-        #if DEBUG
-            self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
-        #endif
-        super.init(parent:parent)
-        do {
-            try self.texture=viewport!.gpu.loader!.newTexture(cgImage:cg,options:nil)
-            pixels.width=Double(texture!.width)
-            pixels.height=Double(texture!.height)
-        } catch  {
-            Debug.error("can't create texture from CGImage",#file,#line)
+    #if os(macOS) || os(iOS) || os(tvOS)
+        public init(parent:NodeUI,cg:CGImage,file:String=#file,line:Int=#line) {
+            #if DEBUG
+                self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
+            #endif
+            super.init(parent:parent)
+            do {
+                try self.texture=viewport!.gpu.loader!.newTexture(cgImage:cg,options:nil)
+                pixels.width=Double(texture!.width)
+                pixels.height=Double(texture!.height)
+            } catch  {
+                Debug.error("can't create texture from CGImage",#file,#line)
+            }
         }
-    }
+    #endif
     public init(parent:NodeUI,data:[UInt8],file:String=#file,line:Int=#line) {
         #if DEBUG
             self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"

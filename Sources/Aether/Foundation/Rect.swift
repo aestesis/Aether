@@ -18,6 +18,8 @@
 //  limitations under the License.
 
 import Foundation
+import SwiftyJSON
+
 #if os(macOS) || os(iOS) || os(tvOS)
     import CoreGraphics
 #endif

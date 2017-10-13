@@ -18,12 +18,14 @@
 //  limitations under the License.
 
 import Foundation
-import Metal
-// OSX, iOS, watchOS, tvOS, Linux
+
 #if os(OSX)
+    import Metal
     import AppKit
-#else
+#elseif os(iOS) || os(tvOS)
+    import Metal
     import UIKit
+#else
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

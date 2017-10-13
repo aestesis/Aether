@@ -18,6 +18,8 @@
 //  limitations under the License.
 
 import Foundation
+import SwiftyJSON
+
 #if os(macOS) || os(iOS) || os(tvOS)
     import CoreGraphics
 #endif
@@ -250,21 +252,39 @@ public struct SizeI {
         width=w;
         height=h;
     }
+    
     public init(json: JSON) {
-        if let w=json["width"].number {
-            width=Int(truncating:w)
-        } else if let w=json["w"].number {
-            width=Int(truncating:w)
-        } else {
-            width=0;
-        }
-        if let h=json["height"].number {
-            height=Int(truncating:h)
-        } else if let h=json["h"].number {
-            height=Int(truncating:h)
-        } else {
-            height=0;
-        }
+        #if os(macOS) || os(iOS) || os(tvOS)
+            if let w=json["width"].number {
+                width=Int(truncating:w)
+            } else if let w=json["w"].number {
+                width=Int(truncating:w)
+            } else {
+                width=0;
+            }
+            if let h=json["height"].number {
+                height=Int(truncating:h)
+            } else if let h=json["h"].number {
+                height=Int(truncating:h)
+            } else {
+                height=0;
+            }
+        #else
+            if let w=json["width"].number {
+                width=Int(w)
+            } else if let w=json["w"].number {
+                width=Int(w)
+            } else {
+                width=0;
+            }
+            if let h=json["height"].number {
+                height=Int(h)
+            } else if let h=json["h"].number {
+                height=Int(h)
+            } else {
+                height=0;
+            }
+        #endif
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -18,12 +18,15 @@
 //  limitations under the License.
 
 import Foundation
-import Metal
-import MetalKit
-import simd
-#if os(iOS)
-    import UIKit
+
+#if os(macOS) || os(iOS) || os(tvOS)
+    import Metal
+    import MetalKit
+    import simd
+#else
+    import Uridium
 #endif
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,38 +42,51 @@ public class RenderPass : NodeUI {
         case none
         case front
         case back
-        var system:MTLCullMode {
-            switch self {
-            case .none:
-                return MTLCullMode.none
-            case .front:
-                return MTLCullMode.front
-            case .back:
-                return MTLCullMode.back
+        #if os(macOS) || os(iOS) || os(tvOS)
+            var system:MTLCullMode {
+                switch self {
+                case .none:
+                    return MTLCullMode.none
+                case .front:
+                    return MTLCullMode.front
+                case .back:
+                    return MTLCullMode.back
+                }
             }
-        }
+        #else
+        // TODO:
+        #endif
     }
     public enum Winding {
         case clockwise
         case counterClockwise
-        var system:MTLWinding {
-            switch self {
-            case .clockwise:
-                return MTLWinding.clockwise
-            case .counterClockwise:
-                return MTLWinding.counterClockwise
+        #if os(macOS) || os(iOS) || os(tvOS)
+            var system:MTLWinding {
+                switch self {
+                case .clockwise:
+                    return MTLWinding.clockwise
+                case .counterClockwise:
+                    return MTLWinding.counterClockwise
+                }
             }
-        }
+        #else 
+        // TODO:
+        #endif
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public private(set) var onDone=Event<Result>()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var cb:MTLCommandBuffer
-    var drawable:MTLDrawable?
+    #if os(macOS) || os(iOS) || os(tvOS)
+        var cb:MTLCommandBuffer
+        var drawable:MTLDrawable?
+        var command:MTLRenderCommandEncoder?
+    #else
+        var cb:Tin.CommandBuffer
+        var command:Tin.RenderCommandEncoder?
+    #endif
     var size:Size = .zero
-    var command:MTLRenderCommandEncoder?
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func commit() {
@@ -142,107 +158,112 @@ public class RenderPass : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
-        cb=texture.viewport!.gpu.queue.makeCommandBuffer()!
-        super.init(parent:texture.viewport!)
-        let descriptor=MTLRenderPassDescriptor()
-        descriptor.colorAttachments[0].texture=texture.texture
-        if let c=clear {
-            descriptor.colorAttachments[0].loadAction=MTLLoadAction.clear
-            descriptor.colorAttachments[0].clearColor=MTLClearColorMake(c.r,c.g,c.b,c.a)
-        } else {
-            descriptor.colorAttachments[0].loadAction=MTLLoadAction.load
-        }
-        descriptor.colorAttachments[0].storeAction = MTLStoreAction.store
-        if let depthClear = depthClear {    // https://metashapes.com/blog/reading-depth-buffer-metal-api/
-            let dd=MTLTextureDescriptor.texture2DDescriptor(pixelFormat:MTLPixelFormat.depth32Float,width:Int(texture.pixels.width),height:Int(texture.pixels.height),mipmapped:false)
-            dd.usage = [.renderTarget]
-            dd.resourceOptions = .storageModePrivate
-            let dt=self.viewport!.gpu.device?.makeTexture(descriptor:dd)
-            descriptor.depthAttachment.clearDepth = depthClear
-            descriptor.depthAttachment.texture = dt
-            descriptor.depthAttachment.loadAction=MTLLoadAction.clear
-            if storeDepth {
-                descriptor.depthAttachment.storeAction=MTLStoreAction.store
+    #if os(macOS) || os(iOS) || os(tvOS)
+        init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
+            cb=texture.viewport!.gpu.queue.makeCommandBuffer()!
+            super.init(parent:texture.viewport!)
+            let descriptor=MTLRenderPassDescriptor()
+            descriptor.colorAttachments[0].texture=texture.texture
+            if let c=clear {
+                descriptor.colorAttachments[0].loadAction=MTLLoadAction.clear
+                descriptor.colorAttachments[0].clearColor=MTLClearColorMake(c.r,c.g,c.b,c.a)
             } else {
+                descriptor.colorAttachments[0].loadAction=MTLLoadAction.load
+            }
+            descriptor.colorAttachments[0].storeAction = MTLStoreAction.store
+            if let depthClear = depthClear {    // https://metashapes.com/blog/reading-depth-buffer-metal-api/
+                let dd=MTLTextureDescriptor.texture2DDescriptor(pixelFormat:MTLPixelFormat.depth32Float,width:Int(texture.pixels.width),height:Int(texture.pixels.height),mipmapped:false)
+                dd.usage = [.renderTarget]
+                dd.resourceOptions = .storageModePrivate
+                let dt=self.viewport!.gpu.device?.makeTexture(descriptor:dd)
+                descriptor.depthAttachment.clearDepth = depthClear
+                descriptor.depthAttachment.texture = dt
+                descriptor.depthAttachment.loadAction=MTLLoadAction.clear
+                if storeDepth {
+                    descriptor.depthAttachment.storeAction=MTLStoreAction.store
+                } else {
+                    descriptor.depthAttachment.storeAction=MTLStoreAction.dontCare
+                }
+            }
+            size = texture.display
+            command=cb.makeRenderCommandEncoder(descriptor:descriptor)
+            if let cm = command {
+                cm.setViewport(MTLViewport(originX:0,originY:0,width:texture.pixels.width,height:texture.pixels.height,znear:0,zfar:1))
+            }
+            cb.addCompletedHandler({ (cb:MTLCommandBuffer) in
+                if cb.status == .error {
+                    if cb.error!.localizedDescription.lowercased().contains("discarded") {
+                        self.onDone.dispatch(.discarded)
+                    } else {
+                        Debug.error("Texture rendering error, parent:\(texture.parent!.className), error:\(cb.error!.localizedDescription)")
+                        self.onDone.dispatch(.error)
+                    }
+                } else {
+                    if storeDepth {
+                        let w = Int(texture.pixels.width)
+                        let h = Int(texture.pixels.height)
+                        let src = descriptor.depthAttachment.texture!
+                        let depth = self.viewport!.gpu.device!.makeBuffer(length:w*h*4,options:MTLResourceOptions())
+                        let cb = texture.viewport!.gpu.queue.makeCommandBuffer()
+                        let blit = cb?.makeBlitCommandEncoder()
+                        blit?.copy(from:src,sourceSlice:0,sourceLevel:0,sourceOrigin:MTLOriginMake(0,0,0),sourceSize:MTLSizeMake(w,h,1),to:depth!,destinationOffset:0,destinationBytesPerRow:4*w,destinationBytesPerImage:4*w*h)
+                        blit?.endEncoding()
+                        cb?.commit()
+                        cb?.waitUntilCompleted()
+                        var r = [Float32](repeating:0,count:w*h)
+                        memcpy(&r,depth?.contents(),w*h*4)
+                        texture["depth"] = r
+                        self.onDone.dispatch(.success)
+                    } else {
+                        self.onDone.dispatch(.success)
+                    }
+                }
+                self.detach()
+            })
+        }
+        init(viewport:Viewport,clear:Color?=nil,depthClear:Double=1.0,descriptor:MTLRenderPassDescriptor,drawable:CAMetalDrawable,depth:MTLTexture?=nil) {
+            self.drawable=drawable
+            cb=viewport.gpu.queue.makeCommandBuffer()!
+            descriptor.colorAttachments[0].texture=drawable.texture
+            if let c=clear {
+                descriptor.colorAttachments[0].loadAction=MTLLoadAction.clear
+                descriptor.colorAttachments[0].clearColor=MTLClearColorMake(c.r,c.g,c.b,c.a)
+            } else {
+                descriptor.colorAttachments[0].loadAction=MTLLoadAction.dontCare
+            }
+            descriptor.colorAttachments[0].storeAction = MTLStoreAction.store
+            if let depth=depth {
+                descriptor.depthAttachment.clearDepth = depthClear
+                descriptor.depthAttachment.texture = depth
+                descriptor.depthAttachment.loadAction=MTLLoadAction.clear
                 descriptor.depthAttachment.storeAction=MTLStoreAction.dontCare
             }
-        }
-        size = texture.display
-        command=cb.makeRenderCommandEncoder(descriptor:descriptor)
-        if let cm = command {
-            cm.setViewport(MTLViewport(originX:0,originY:0,width:texture.pixels.width,height:texture.pixels.height,znear:0,zfar:1))
-        }
-        cb.addCompletedHandler({ (cb:MTLCommandBuffer) in
-            if cb.status == .error {
-                if cb.error!.localizedDescription.lowercased().contains("discarded") {
-                    self.onDone.dispatch(.discarded)
-                } else {
-                    Debug.error("Texture rendering error, parent:\(texture.parent!.className), error:\(cb.error!.localizedDescription)")
-                    self.onDone.dispatch(.error)
-                }
-            } else {
-                if storeDepth {
-                    let w = Int(texture.pixels.width)
-                    let h = Int(texture.pixels.height)
-                    let src = descriptor.depthAttachment.texture!
-                    let depth = self.viewport!.gpu.device!.makeBuffer(length:w*h*4,options:MTLResourceOptions())
-                    let cb = texture.viewport!.gpu.queue.makeCommandBuffer()
-                    let blit = cb?.makeBlitCommandEncoder()
-                    blit?.copy(from:src,sourceSlice:0,sourceLevel:0,sourceOrigin:MTLOriginMake(0,0,0),sourceSize:MTLSizeMake(w,h,1),to:depth!,destinationOffset:0,destinationBytesPerRow:4*w,destinationBytesPerImage:4*w*h)
-                    blit?.endEncoding()
-                    cb?.commit()
-                    cb?.waitUntilCompleted()
-                    var r = [Float32](repeating:0,count:w*h)
-                    memcpy(&r,depth?.contents(),w*h*4)
-                    texture["depth"] = r
-                    self.onDone.dispatch(.success)
+            size = viewport.size
+            let vsize = viewport.size * viewport.scale
+            command=cb.makeRenderCommandEncoder(descriptor: descriptor)
+            if let cm = command {
+                cm.setViewport(MTLViewport(originX:0,originY:0,width:vsize.width,height:vsize.height,znear:0,zfar:1))
+            }
+            super.init(parent:viewport)
+            cb.addCompletedHandler({ (cb:MTLCommandBuffer) in
+                if cb.status == .error {
+                    if cb.error!.localizedDescription.lowercased().contains("discarded") {
+                        self.onDone.dispatch(.discarded)
+                    } else {
+                        Debug.error("Viewport rendering error:\(cb.error!.localizedDescription)")
+                        self.onDone.dispatch(.error)
+                    }
                 } else {
                     self.onDone.dispatch(.success)
                 }
-            }
-            self.detach()
-        })
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    init(viewport:Viewport,clear:Color?=nil,depthClear:Double=1.0,descriptor:MTLRenderPassDescriptor,drawable:CAMetalDrawable,depth:MTLTexture?=nil) {
-        self.drawable=drawable
-        cb=viewport.gpu.queue.makeCommandBuffer()!
-        descriptor.colorAttachments[0].texture=drawable.texture
-        if let c=clear {
-            descriptor.colorAttachments[0].loadAction=MTLLoadAction.clear
-            descriptor.colorAttachments[0].clearColor=MTLClearColorMake(c.r,c.g,c.b,c.a)
-        } else {
-            descriptor.colorAttachments[0].loadAction=MTLLoadAction.dontCare
+                self.detach()
+            })
         }
-        descriptor.colorAttachments[0].storeAction = MTLStoreAction.store
-        if let depth=depth {
-            descriptor.depthAttachment.clearDepth = depthClear
-            descriptor.depthAttachment.texture = depth
-            descriptor.depthAttachment.loadAction=MTLLoadAction.clear
-            descriptor.depthAttachment.storeAction=MTLStoreAction.dontCare
+    #else
+        init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
+            super.init(parent:texture.viewport!)
         }
-        size = viewport.size
-        let vsize = viewport.size * viewport.scale
-        command=cb.makeRenderCommandEncoder(descriptor: descriptor)
-        if let cm = command {
-            cm.setViewport(MTLViewport(originX:0,originY:0,width:vsize.width,height:vsize.height,znear:0,zfar:1))
-        }
-        super.init(parent:viewport)
-        cb.addCompletedHandler({ (cb:MTLCommandBuffer) in
-            if cb.status == .error {
-                if cb.error!.localizedDescription.lowercased().contains("discarded") {
-                    self.onDone.dispatch(.discarded)
-                } else {
-                    Debug.error("Viewport rendering error:\(cb.error!.localizedDescription)")
-                    self.onDone.dispatch(.error)
-                }
-            } else {
-                self.onDone.dispatch(.success)
-            }
-            self.detach()
-        })
-    }
+    #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     override public func detach() {
@@ -314,34 +335,43 @@ public class DepthStencilState : NodeUI {
         case lesser
         case all
     }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var state:MTLDepthStencilState
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(viewport:Viewport,mode:Mode,write:Bool) {
-        let d=MTLDepthStencilDescriptor()
-        d.isDepthWriteEnabled = write
-        switch mode {
-        case .none:
-            d.depthCompareFunction = .never
-        case .greater:
-            d.depthCompareFunction = .greaterEqual
-        case .lesser:
-            d.depthCompareFunction = .lessEqual
-        case .all:
-            d.depthCompareFunction = .always
+    #if os(macOS) || os(iOS) || os(tvOS)
+        var state:MTLDepthStencilState
+        public init(viewport:Viewport,mode:Mode,write:Bool) {
+            let d=MTLDepthStencilDescriptor()
+            d.isDepthWriteEnabled = write
+            switch mode {
+            case .none:
+                d.depthCompareFunction = .never
+            case .greater:
+                d.depthCompareFunction = .greaterEqual
+            case .lesser:
+                d.depthCompareFunction = .lessEqual
+            case .all:
+                d.depthCompareFunction = .always
+            }
+            state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
+            super.init(parent:viewport)
         }
-        state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
-        super.init(parent:viewport)
-    }
-    public init(viewport:Viewport) {
-        let d=MTLDepthStencilDescriptor()
-        d.isDepthWriteEnabled = false
-        d.depthCompareFunction = .always
-        state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
-        super.init(parent:viewport)
-    }
+        public init(viewport:Viewport) {
+            let d=MTLDepthStencilDescriptor()
+            d.isDepthWriteEnabled = false
+            d.depthCompareFunction = .always
+            state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
+            super.init(parent:viewport)
+        }
+    #else
+        public init(viewport:Viewport,mode:Mode,write:Bool) {
+            super.init(parent:viewport)
+            Debug.notImplemented()
+            // TODO:
+        }
+        public init(viewport:Viewport) {
+            super.init(parent:viewport)
+            Debug.notImplemented()
+            // TODO:
+        }
+    #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 }

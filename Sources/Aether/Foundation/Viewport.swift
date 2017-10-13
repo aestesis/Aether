@@ -19,6 +19,7 @@
 //  limitations under the License.
 
 import Foundation
+
 #if os(tvOS) || os(iOS) || os(macOS)
     import Metal
     import QuartzCore
@@ -510,7 +511,7 @@ public class Viewport : NodeUI {
         super.detach()
     }
     public var uiThread : Bool {
-        if let b = Alib.Thread.current["ui.thread"] as? Bool {
+        if let b = Thread.current["ui.thread"] as? Bool {
             return b
         }
         return false

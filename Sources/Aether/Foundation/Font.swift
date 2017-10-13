@@ -18,11 +18,17 @@
 //  limitations under the License.
 
 import Foundation
-import CoreGraphics
 
+#if os(macOS)
+    import CoreGraphics
+    import AppKit
+#elseif os(iOS) || os(tvOS)
+    import CoreGraphics
+    import UIKit
+#else
+#endif
 
 #if os(iOS) || os(tvOS)
-    import UIKit
     public class Font : NodeUI {
         static var registred=[String:Bool]()
         static let nsOptions:NSStringDrawingOptions = [.usesFontLeading,.usesDeviceMetrics,.usesLineFragmentOrigin,.truncatesLastVisibleLine]
@@ -309,7 +315,6 @@ import CoreGraphics
         }
     }
 #elseif os(OSX)
-    import AppKit
     public class Font : NodeUI {
         static var registred=[String:Bool]()
         static let nsOptions:NSString.DrawingOptions = [.usesFontLeading,.usesDeviceMetrics,.usesLineFragmentOrigin,.truncatesLastVisibleLine]
@@ -519,8 +524,98 @@ import CoreGraphics
             return NSFontManager.shared.availableFonts
         }
     }
+#else
+    public class Font : NodeUI {
+        static var registred=[String:Bool]()
+        //static let nsOptions:NSString.DrawingOptions = [.usesFontLeading,.usesDeviceMetrics,.usesLineFragmentOrigin,.truncatesLastVisibleLine]
+        var sysfont:UInt32
+        public var name:String {
+            return ""
+        }
+        public var familly:String {
+            return ""
+        }
+        public var size:Double {
+            return 0
+        }
+        public var ascender:Double {
+            return 0
+        }
+        public var descender:Double {
+            return 0
+        }
+        public var leading:Double {
+            return 0
+        }
+        public var height:Double {
+            return 0
+        }
+        public func mask(text:String,align:Align=Align.left,width:Double=0,lines:Int=0) -> Bitmap {
+            return Bitmap(parent:self.viewport!,size:Size(8,8))
+        }
+        public func bitmap(text:String,align:Align=Align.left,width:Double=0,color:Color=Color.white,_ bitmap:@escaping (Bitmap)->())  {
+            if text.length==0  {
+                Debug.info("no text")
+                return
+            }
+            bg {
+                let bf=self.mask(text:text,align:align,width:width)
+                let b=Bitmap(parent:self.viewport!,size:bf.size)
+                let g=Graphics(image:b,clear:color)
+                g.draw(rect:b.bounds,image:bf,blend:.setAlpha,color:color)
+                g.done {_ in
+                    bitmap(b)
+                }
+            }
+        }
+        public func size(_ text:String) -> Size {
+            return Size.zero
+        }
+        public func bounds(_ text:String, width:Double? = nil, lines:Int = 0) -> Rect {
+            return Rect.zero
+        }
+        public func wordWrap(text:String,width:Double) -> [String] {
+            let paraf = text.split("\n")
+            var lines = [String]()
+            var l = ""
+            for p in paraf {
+                let words = p.split(" ")
+                for w in words {
+                    let n = (l.length>0) ? (l+" "+w) : (w)
+                    if size(l).width>width {
+                        lines.append(l)
+                        l = w
+                    } else {
+                        l = n
+                    }
+                }
+                if l.length>0 {
+                    lines.append(l)
+                    l = ""
+                }
+            }
+            return lines
+        }
+        public init(parent:NodeUI,name:String,size:Double) {
+            super.init(parent:parent)
+        }
+        public init(font:Font,size:Double) {
+            super.init(parent:font)
+        }
+        public convenience init(parent:NodeUI,name:String,size:Int) {
+            self.init(parent:parent,name:name,size:Double(size))
+        }
+        public convenience init(font:Font,size:Int) {
+            self.init(font:font,size:Double(size))
+        }
+        public static var availableFonts:[String] {
+            return []
+        }
+    }
 #endif
 
+#if os(macOS) || os(iOS) || os(tvOS)
+// TODO:
 public class FontMetrics : NodeUI {
     let font:Font
     public init(parent:NodeUI,name:String,size:Double) {
@@ -542,3 +637,4 @@ public class FontMetrics : NodeUI {
         }
     }
 }
+#endif
