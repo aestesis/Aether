@@ -1,6 +1,6 @@
 //
 //  Signal.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 22/04/2016.
 //  Copyright © 2016 aestesis. All rights reserved.

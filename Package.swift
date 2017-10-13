@@ -2,14 +2,14 @@
 
 import PackageDescription
 
-let package = Package(
+let package = Package(swi
     name: "Aether",
     products: [
         .library(name: "Aether",targets: ["Aether"])
     ],
     dependencies: [
         .package(url: "https://github.com/IBM-Swift/SwiftyJSON.git", from:"17.0.0"),
-        .package(url: "https://github.com/aestesis/Uridium.git", from:"0.0.7")
+        .package(url: "https://github.com/aestesis/Uridium.git", from:"0.0.8")
     ],
     targets: [
         .target(name: "Aether",dependencies: ["Uridium","SwiftyJSON"]),

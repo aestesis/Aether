@@ -1,6 +1,6 @@
 //
 //  Texture2D.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 01/03/2016.
 //  Copyright © 2016 aestesis. All rights reserved.

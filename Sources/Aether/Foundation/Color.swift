@@ -1,6 +1,6 @@
 //
 //  Color.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 25/02/2016.
 //  Copyright © 2016 aestesis. All rights reserved.

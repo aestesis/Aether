@@ -1,6 +1,6 @@
 //
 //  Touch.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 21/04/2016.
 //  Copyright © 2016 aestesis. All rights reserved.

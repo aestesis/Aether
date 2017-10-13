@@ -1,6 +1,6 @@
 //
 //  Paint.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 01/04/2016.
 //  Copyright © 2016 aestesis. All rights reserved.
