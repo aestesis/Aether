@@ -8,10 +8,11 @@ let package = Package(
         .library(name: "Aether",targets: ["Aether"])
     ],
     dependencies: [
+        .package(url: "https://github.com/aestesis/libtess2.git", from:"1.0.4"),
         .package(url: "https://github.com/IBM-Swift/SwiftyJSON.git", from:"17.0.0"),
         .package(url: "https://github.com/aestesis/Uridium.git", from:"0.0.8")
     ],
     targets: [
-        .target(name: "Aether",dependencies: ["Uridium","SwiftyJSON"]),
+        .target(name: "Aether",dependencies: ["Uridium","SwiftyJSON","libtess2"]),
     ]
 )
