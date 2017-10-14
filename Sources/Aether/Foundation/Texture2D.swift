@@ -157,7 +157,7 @@ open class Texture2D : NodeUI {
             } else {
                 Debug.error("can't load texture: \(filename), file not found)",#file,#line)
             }
-        #else
+        #elseif os(macOS)
             if let ns=NSImage(contentsOfFile: Application.resourcePath(filename)), let cg=ns.cgImage(forProposedRect: nil,context:nil,hints:nil) {
                 if viewport != nil && ns.size.width != 0 && ns.size.height != 0 {
                     initialize(from: cg)
@@ -169,6 +169,9 @@ open class Texture2D : NodeUI {
             } else {
                 Debug.error("can't load texture: \(filename), file not found)",#file,#line)
             }
+        #else
+            Debug.notImplemented()
+            // TODO:
         #endif
         // decode displaysize&scale from filename eg:  filename.134x68.png -> display=Size(134,68)
         let m=filename.split(".")
@@ -287,29 +290,19 @@ open class Texture2D : NodeUI {
             super.init(parent:parent)
             self.scale = scale
         }
-    #endif
-    public init(parent:NodeUI,size:Size,scale:Size=Size(1,1),border:Size=Size.zero,format:Format = .rgba,file:String=#file,line:Int=#line) {
-        #if DEBUG
-            self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
-        #endif
-        let pixfmt = (format == .rgba) ? MTLPixelFormat.rgba8Unorm : MTLPixelFormat.a8Unorm
-        self.pixels=size*scale
-        super.init(parent: parent)
-        self.scale=scale
-        let d=MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixfmt, width: Int(self.pixels.width), height: Int(self.pixels.height), mipmapped: false)
-        //d.textureType = .Type2DMultisample // TODO: implement multisampled texture http://stackoverflow.com/questions/36227209/multi-sampling-jagged-edges-in-metalios
-        d.usage = .renderTarget
-        self.texture=viewport!.gpu.device?.makeTexture(descriptor:d)
-    }
-    public init(parent:NodeUI,path:String,border:Size=Size.zero,file:String=#file,line:Int=#line) {
-        #if DEBUG
-            self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
-        #endif
-        self.border=border
-        super.init(parent: parent)
-        load(path)
-    }
-    #if os(macOS) || os(iOS) || os(tvOS)
+        public init(parent:NodeUI,size:Size,scale:Size=Size(1,1),border:Size=Size.zero,format:Format = .rgba,file:String=#file,line:Int=#line) {
+            #if DEBUG
+                self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
+            #endif
+            let pixfmt = (format == .rgba) ? MTLPixelFormat.rgba8Unorm : MTLPixelFormat.a8Unorm
+            self.pixels=size*scale
+            super.init(parent: parent)
+            self.scale=scale
+            let d=MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixfmt, width: Int(self.pixels.width), height: Int(self.pixels.height), mipmapped: false)
+            //d.textureType = .Type2DMultisample // TODO: implement multisampled texture http://stackoverflow.com/questions/36227209/multi-sampling-jagged-edges-in-metalios
+            d.usage = .renderTarget
+            self.texture=viewport!.gpu.device?.makeTexture(descriptor:d)
+        }
         public init(parent:NodeUI,cg:CGImage,file:String=#file,line:Int=#line) {
             #if DEBUG
                 self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
@@ -323,7 +316,24 @@ open class Texture2D : NodeUI {
                 Debug.error("can't create texture from CGImage",#file,#line)
             }
         }
+    #else
+        public init(parent:NodeUI,size:Size,scale:Size=Size(1,1),border:Size=Size.zero,format:Format = .rgba,file:String=#file,line:Int=#line) {
+            #if DEBUG
+                self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
+            #endif
+            Debug.notImplemented()
+            // TODO:
+            super.init(parent:parent)
+        }
     #endif
+    public init(parent:NodeUI,path:String,border:Size=Size.zero,file:String=#file,line:Int=#line) {
+        #if DEBUG
+            self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
+        #endif
+        self.border=border
+        super.init(parent: parent)
+        load(path)
+    }
     public init(parent:NodeUI,data:[UInt8],file:String=#file,line:Int=#line) {
         #if DEBUG
             self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
@@ -339,44 +349,55 @@ open class Texture2D : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func get() -> [UInt32]? {
-        if let t=texture {
-            let data=[UInt32](repeating: 0,count: t.width*t.height)
-            t.getBytes(UnsafeMutablePointer(mutating:data), bytesPerRow: t.width*4, from: MTLRegion(origin:MTLOrigin(x:0,y:0,z:0),size:MTLSize(width:t.width,height:t.height,depth:1)), mipmapLevel: 0)
-            return data
-        } else {
-            Debug.error(Error("no texture",#file,#line))
-        }
-        return nil
-    }
-    public func get(pixel p:Point) -> Color {
-        if let t=texture {
-            let data=[UInt32](repeating: 0,count: 1)
-            t.getBytes(UnsafeMutablePointer(mutating:data), bytesPerRow: t.width*4, from: MTLRegion(origin:MTLOrigin(x:Int(p.x),y:Int(p.y),z:0),size:MTLSize(width:1,height:1,depth:1)), mipmapLevel: 0)
-            return Color(abgr:data[0])
-        } else {
-            Debug.error(Error("no texture",#file,#line))
-        }
-        return Color.transparent
-    }
-    public func set(pixels data:[UInt32]) {
-        if let t=texture {
-            t.replace(region: MTLRegion(origin:MTLOrigin(x:0,y:0,z:0),size:MTLSize(width:t.width,height:t.height,depth:1)), mipmapLevel: 0, withBytes: UnsafePointer(data), bytesPerRow: t.width*4)
-        } else {
-            Debug.error(Error("no texture",#file,#line))
-        }
-    }
-    public func set(raw data:UnsafeRawPointer) {
-        if let t=texture {
-            if t.pixelFormat == .rgba8Unorm {
-                t.replace(region: MTLRegion(origin:MTLOrigin(x:0,y:0,z:0),size:MTLSize(width:t.width,height:t.height,depth:1)), mipmapLevel: 0, withBytes: data, bytesPerRow: t.width*4)
-            } else {    // MTLPixelFormat.a8Unorm
-                t.replace(region: MTLRegion(origin:MTLOrigin(x:0,y:0,z:0),size:MTLSize(width:t.width,height:t.height,depth:1)), mipmapLevel: 0, withBytes: data, bytesPerRow: t.width)
+    #if os(macOS) || os(iOS) || os(tvOS)
+        public func get() -> [UInt32]? {
+            if let t=texture {
+                let data=[UInt32](repeating: 0,count: t.width*t.height)
+                t.getBytes(UnsafeMutablePointer(mutating:data), bytesPerRow: t.width*4, from: MTLRegion(origin:MTLOrigin(x:0,y:0,z:0),size:MTLSize(width:t.width,height:t.height,depth:1)), mipmapLevel: 0)
+                return data
+            } else {
+                Debug.error(Error("no texture",#file,#line))
             }
-        } else {
-            Debug.error(Error("no texture",#file,#line))
+            return nil
         }
-    }
+        public func get(pixel p:Point) -> Color {
+            if let t=texture {
+                let data=[UInt32](repeating: 0,count: 1)
+                t.getBytes(UnsafeMutablePointer(mutating:data), bytesPerRow: t.width*4, from: MTLRegion(origin:MTLOrigin(x:Int(p.x),y:Int(p.y),z:0),size:MTLSize(width:1,height:1,depth:1)), mipmapLevel: 0)
+                return Color(abgr:data[0])
+            } else {
+                Debug.error(Error("no texture",#file,#line))
+            }
+            return Color.transparent
+        }
+        public func set(pixels data:[UInt32]) {
+            if let t=texture {
+                t.replace(region: MTLRegion(origin:MTLOrigin(x:0,y:0,z:0),size:MTLSize(width:t.width,height:t.height,depth:1)), mipmapLevel: 0, withBytes: UnsafePointer(data), bytesPerRow: t.width*4)
+            } else {
+                Debug.error(Error("no texture",#file,#line))
+            }
+        }
+        public func set(raw data:UnsafeRawPointer) {
+            if let t=texture {
+                if t.pixelFormat == .rgba8Unorm {
+                    t.replace(region: MTLRegion(origin:MTLOrigin(x:0,y:0,z:0),size:MTLSize(width:t.width,height:t.height,depth:1)), mipmapLevel: 0, withBytes: data, bytesPerRow: t.width*4)
+                } else {    // MTLPixelFormat.a8Unorm
+                    t.replace(region: MTLRegion(origin:MTLOrigin(x:0,y:0,z:0),size:MTLSize(width:t.width,height:t.height,depth:1)), mipmapLevel: 0, withBytes: data, bytesPerRow: t.width)
+                }
+            } else {
+                Debug.error(Error("no texture",#file,#line))
+            }
+        }
+    #else
+        public func set(pixels data:[UInt32]) {
+            Debug.notImplemented()
+            // TODO:
+        }
+        public func set(raw data:UnsafeRawPointer) {
+            Debug.notImplemented()
+            // TODO:
+        }
+    #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 }

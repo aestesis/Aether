@@ -1,6 +1,6 @@
 //
 //  Effect.swift
-//  Alib
+//  Aether
 //
 //  Created by renan jegouzo on 03/08/2016.
 //  Copyright © 2016 aestesis. All rights reserved.
@@ -61,7 +61,7 @@ public class GradientEffect : Effect {
             process(source:source,destination:b).then { f in
                 if let b = f.result as? Bitmap {
                     fut.done(b)
-                } else if let e = f.result as? Alib.Error {
+                } else if let e = f.result as? Aether.Error {
                     fut.error(e,#file,#line)
                     b.detach()
                 }

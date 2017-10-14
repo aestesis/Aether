@@ -18,8 +18,13 @@
 //  limitations under the License.
 
 import Foundation
-import Metal
-import MetalKit
+
+#if os(macOS) || os(iOS) || os(tvOS)
+    import Metal
+    import MetalKit
+#else
+    import Uridium
+#endif
 
 // TODO: add mouse/touch support http://antongerdelan.net/opengl/raycasting.html
 // TODO: normal mapping https://learnopengl.com/#!Advanced-Lighting/Normal-Mapping  http://fabiensanglard.net/bumpMapping/index.php

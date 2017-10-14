@@ -122,7 +122,7 @@ public class Application {
         }
     }
     public static func localPath(_ path:String) -> String {
-        #if os(OSX)
+        #if os(OSX) || os(Linux)
             let sup=NSSearchPathForDirectoriesInDomains(FileManager.SearchPathDirectory.applicationSupportDirectory, FileManager.SearchPathDomainMask.userDomainMask, true)[0]
             let dir=sup+"/"+Bundle.main.bundleIdentifier!+"/"
             let fm=FileManager.default
@@ -140,6 +140,8 @@ public class Application {
         #elseif os(tvOS)
             let dir=NSSearchPathForDirectoriesInDomains(FileManager.SearchPathDirectory.cachesDirectory, FileManager.SearchPathDomainMask.userDomainMask, true).last!
             return dir+"/"+path
+        #else
+            return "not implemented"
         #endif
     }
     public static func resourcePath(_ path:String) -> String {

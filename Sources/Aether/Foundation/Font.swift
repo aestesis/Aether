@@ -528,7 +528,7 @@ import Foundation
     public class Font : NodeUI {
         static var registred=[String:Bool]()
         //static let nsOptions:NSString.DrawingOptions = [.usesFontLeading,.usesDeviceMetrics,.usesLineFragmentOrigin,.truncatesLastVisibleLine]
-        var sysfont:UInt32
+        var sysfont:UInt32 = 0
         public var name:String {
             return ""
         }

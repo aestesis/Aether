@@ -299,7 +299,7 @@ public class Viewport : NodeUI {
                                                         self.ui {
                                                             b.detach()
                                                         }
-                                                    } else if let err = f.result as? Alib.Error {
+                                                    } else if let err = f.result as? Error {
                                                         Debug.error(err,#file,#line)
                                                         self.ui {
                                                             b.detach()
@@ -523,7 +523,7 @@ public class Viewport : NodeUI {
         _zz = Worker(parent:self,threads: 1)
         Debug.warning("Workers launched, bg:\(nt) io:\(nt) zz:1 cpus:\(ProcessInfo.processInfo.activeProcessorCount)")
         refreshThread()
-        Alib.Thread.current["ui.thread"]=true
+        Thread.current["ui.thread"]=true
     }
     #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -670,6 +670,7 @@ import Foundation
             }
     }
     public class Buffer : NodeUI {
+        var wob = 0
         init(buffers:Buffers,size:Int) {
             super.init(parent:buffers)
         }
@@ -680,8 +681,7 @@ import Foundation
             super.detach()
         }
         public var ptr:UnsafeMutableRawPointer {
-            let wob = 0
-            return UnsafeMutableRawPointer(wob)
+            return UnsafeMutableRawPointer(&wob)
         }
         public var size:Int {
             return 0
