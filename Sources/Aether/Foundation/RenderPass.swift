@@ -30,19 +30,19 @@ import Foundation
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class RenderPass : NodeUI {
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public enum Result {
-        case error
-        case discarded
-        case success
-    }
-    public enum CullMode {
-        case none
-        case front
-        case back
-        #if os(macOS) || os(iOS) || os(tvOS)
+#if os(macOS) || os(iOS) || os(tvOS)
+    public class RenderPass : NodeUI {
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public enum Result {
+            case error
+            case discarded
+            case success
+        }
+        public enum CullMode {
+            case none
+            case front
+            case back
             var system:MTLCullMode {
                 switch self {
                 case .none:
@@ -53,14 +53,10 @@ public class RenderPass : NodeUI {
                     return MTLCullMode.back
                 }
             }
-        #else
-        // TODO:
-        #endif
-    }
-    public enum Winding {
-        case clockwise
-        case counterClockwise
-        #if os(macOS) || os(iOS) || os(tvOS)
+        }
+        public enum Winding {
+            case clockwise
+            case counterClockwise
             var system:MTLWinding {
                 switch self {
                 case .clockwise:
@@ -69,96 +65,87 @@ public class RenderPass : NodeUI {
                     return MTLWinding.counterClockwise
                 }
             }
-        #else 
-        // TODO:
-        #endif
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public private(set) var onDone=Event<Result>()
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    #if os(macOS) || os(iOS) || os(tvOS)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public private(set) var onDone=Event<Result>()
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         var cb:MTLCommandBuffer
         var drawable:MTLDrawable?
         var command:MTLRenderCommandEncoder?
-    #else
-        var cb:Tin.CommandBuffer
-        var command:Tin.RenderCommandEncoder?
-    #endif
-    var size:Size = .zero
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func commit() {
-        command!.endEncoding()
-        if let d=drawable {
-            cb.present(d)
+        var size:Size = .zero
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func commit() {
+            command!.endEncoding()
+            if let d=drawable {
+                cb.present(d)
+            }
+            command = nil
+            cb.commit()
         }
-        command = nil
-        cb.commit()
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func use(_ sampler:Sampler, atIndex index:Int=0) {
-        command!.setFragmentSamplerState(sampler.state, index:index)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func use(program:Program) {
-        command!.setRenderPipelineState(program.rps!)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func use(state:DepthStencilState) {
-        command!.setDepthStencilState(state.state)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func use(vertexBuffer buffer:Buffer,atIndex index:Int) {
-        command!.setVertexBuffer(buffer.b,offset:0,index:index)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func use(fragmentBuffer fragment:Buffer,atIndex index:Int) {
-        command!.setFragmentBuffer(fragment.b, offset: 0, index: index)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func use(texture:Texture2D, atIndex index:Int=0) {
-        command!.setFragmentTexture(texture.texture, index: index)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func use(vertexTexture vt: Texture2D, atIndex index:Int=0) {
-        command!.setVertexTexture(vt.texture,index:index)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(triangle n:Int) {
-        command!.drawPrimitives(type: MTLPrimitiveType.triangle, vertexStart: 0, vertexCount: n)
-    }
-    public func draw(trianglestrip n:Int) {
-        command!.drawPrimitives(type:.triangleStrip,vertexStart:0,vertexCount:n)
-    }
-    public func draw(triangle n:Int,index:Buffer) {
-        command!.drawIndexedPrimitives(type:.triangle,indexCount:n,indexType:.uint32,indexBuffer:index.b,indexBufferOffset:0)
-    }
-    public func draw(line n:Int) {
-        command!.drawPrimitives(type:.line,vertexStart:0,vertexCount:n)
-    }
-    public func draw(sprite n:Int) {
-        command!.drawPrimitives(type:.point,vertexStart:0,vertexCount:n)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func clip(rect r:Rect) {
-        command!.setScissorRect(MTLScissorRect(x:Int(r.x),y:Int(r.y),width:Int(r.w),height:Int(r.h)))
-    }
-    public func set(cull:CullMode) {
-        command!.setCullMode(cull.system)
-    }
-    public func set(front:Winding) {
-        command!.setFrontFacing(front.system)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    #if os(macOS) || os(iOS) || os(tvOS)
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        func use(_ sampler:Sampler, atIndex index:Int=0) {
+            command!.setFragmentSamplerState(sampler.state, index:index)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func use(program:Program) {
+            command!.setRenderPipelineState(program.rps!)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func use(state:DepthStencilState) {
+            command!.setDepthStencilState(state.state)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func use(vertexBuffer buffer:Buffer,atIndex index:Int) {
+            command!.setVertexBuffer(buffer.b,offset:0,index:index)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func use(fragmentBuffer fragment:Buffer,atIndex index:Int) {
+            command!.setFragmentBuffer(fragment.b, offset: 0, index: index)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func use(texture:Texture2D, atIndex index:Int=0) {
+            command!.setFragmentTexture(texture.texture, index: index)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func use(vertexTexture vt: Texture2D, atIndex index:Int=0) {
+            command!.setVertexTexture(vt.texture,index:index)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func draw(triangle n:Int) {
+            command!.drawPrimitives(type: MTLPrimitiveType.triangle, vertexStart: 0, vertexCount: n)
+        }
+        public func draw(trianglestrip n:Int) {
+            command!.drawPrimitives(type:.triangleStrip,vertexStart:0,vertexCount:n)
+        }
+        public func draw(triangle n:Int,index:Buffer) {
+            command!.drawIndexedPrimitives(type:.triangle,indexCount:n,indexType:.uint32,indexBuffer:index.b,indexBufferOffset:0)
+        }
+        public func draw(line n:Int) {
+            command!.drawPrimitives(type:.line,vertexStart:0,vertexCount:n)
+        }
+        public func draw(sprite n:Int) {
+            command!.drawPrimitives(type:.point,vertexStart:0,vertexCount:n)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func clip(rect r:Rect) {
+            command!.setScissorRect(MTLScissorRect(x:Int(r.x),y:Int(r.y),width:Int(r.w),height:Int(r.h)))
+        }
+        public func set(cull:CullMode) {
+            command!.setCullMode(cull.system)
+        }
+        public func set(front:Winding) {
+            command!.setFrontFacing(front.system)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
             cb=texture.viewport!.gpu.queue.makeCommandBuffer()!
             super.init(parent:texture.viewport!)
@@ -259,362 +246,525 @@ public class RenderPass : NodeUI {
                 self.detach()
             })
         }
-    #else
-        init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
-            super.init(parent:texture.viewport!)
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        override public func detach() {
+            onDone.removeAll()
+            super.detach()
         }
-    #endif
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    override public func detach() {
-        onDone.removeAll()
-        super.detach()
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
     }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-}
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-class Sampler : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    enum Mode {
-        case clamp
-        case wrap
-        case mirror
-    }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var state:MTLSamplerState
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    init(viewport:Viewport,modeX:Mode,modeY:Mode) {
-        let d=MTLSamplerDescriptor()
-        switch modeX {
-        case .clamp:
-            d.sAddressMode = .clampToEdge
-            break
-        case .wrap:
-            d.sAddressMode = .repeat
-            break
-        case .mirror:
-            d.sAddressMode = .mirrorRepeat
-            break;
+    class Sampler : NodeUI {
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        enum Mode {
+            case clamp
+            case wrap
+            case mirror
         }
-        switch modeY {
-        case .clamp:
-            d.tAddressMode = .clampToEdge
-            break
-        case .wrap:
-            d.tAddressMode = .repeat
-            break
-        case .mirror:
-            d.tAddressMode = .mirrorRepeat
-            break;
-        }
-        d.minFilter = .linear
-        d.magFilter = .linear
-        d.mipFilter = .linear
-        state = viewport.gpu.device!.makeSamplerState(descriptor: d)!
-        super.init(parent:viewport)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class DepthStencilState : NodeUI {
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public enum Mode {
-        case none
-        case greater
-        case lesser
-        case all
-    }
-    #if os(macOS) || os(iOS) || os(tvOS)
-        var state:MTLDepthStencilState
-        public init(viewport:Viewport,mode:Mode,write:Bool) {
-            let d=MTLDepthStencilDescriptor()
-            d.isDepthWriteEnabled = write
-            switch mode {
-            case .none:
-                d.depthCompareFunction = .never
-            case .greater:
-                d.depthCompareFunction = .greaterEqual
-            case .lesser:
-                d.depthCompareFunction = .lessEqual
-            case .all:
-                d.depthCompareFunction = .always
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        var state:MTLSamplerState
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        init(viewport:Viewport,modeX:Mode,modeY:Mode) {
+            let d=MTLSamplerDescriptor()
+            switch modeX {
+            case .clamp:
+                d.sAddressMode = .clampToEdge
+                break
+            case .wrap:
+                d.sAddressMode = .repeat
+                break
+            case .mirror:
+                d.sAddressMode = .mirrorRepeat
+                break;
             }
-            state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
+            switch modeY {
+            case .clamp:
+                d.tAddressMode = .clampToEdge
+                break
+            case .wrap:
+                d.tAddressMode = .repeat
+                break
+            case .mirror:
+                d.tAddressMode = .mirrorRepeat
+                break;
+            }
+            d.minFilter = .linear
+            d.magFilter = .linear
+            d.mipFilter = .linear
+            state = viewport.gpu.device!.makeSamplerState(descriptor: d)!
             super.init(parent:viewport)
         }
-        public init(viewport:Viewport) {
-            let d=MTLDepthStencilDescriptor()
-            d.isDepthWriteEnabled = false
-            d.depthCompareFunction = .always
-            state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
-            super.init(parent:viewport)
-        }
-    #else
-        public init(viewport:Viewport,mode:Mode,write:Bool) {
-            super.init(parent:viewport)
-            Debug.notImplemented()
-            // TODO:
-        }
-        public init(viewport:Viewport) {
-            super.init(parent:viewport)
-            Debug.notImplemented()
-            // TODO:
-        }
-    #endif
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Program : NodeUI {
-    
-    // TODO: MetaProgram using MTLRenderPipelineReflection
-    
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var rps:MTLRenderPipelineState?
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[MTLVertexFormat]) {
-        super.init(parent:viewport)
-        self.initSelf(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt))
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,vdesc:MTLVertexDescriptor) {
-        super.init(parent:viewport)
-        self.initSelf(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:vdesc)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[MTLVertexFormat]) {
-        super.init(parent:library)
-        self.initSelf(library,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt))
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private func initSelf(_ library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,vdesc:MTLVertexDescriptor) {
-        let pipe=MTLRenderPipelineDescriptor()
-        let ca=pipe.colorAttachments[0]
-        ca?.pixelFormat=MTLPixelFormat.bgra8Unorm
-        switch blend {
-        case BlendMode.opaque:
-            ca?.isBlendingEnabled=true
-            ca?.rgbBlendOperation=MTLBlendOperation.add
-            ca?.alphaBlendOperation=MTLBlendOperation.max
-            ca?.sourceRGBBlendFactor=MTLBlendFactor.one
-            ca?.destinationRGBBlendFactor=MTLBlendFactor.zero
-            ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
-            ca?.destinationAlphaBlendFactor=MTLBlendFactor.one
-            break
-        case BlendMode.alpha:
-            ca?.isBlendingEnabled=true
-            ca?.rgbBlendOperation=MTLBlendOperation.add
-            ca?.alphaBlendOperation=MTLBlendOperation.max
-            ca?.sourceRGBBlendFactor=MTLBlendFactor.sourceAlpha
-            ca?.destinationRGBBlendFactor=MTLBlendFactor.oneMinusSourceAlpha
-            ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
-            ca?.destinationAlphaBlendFactor=MTLBlendFactor.one
-            break
-        case BlendMode.setAlpha:
-            ca?.isBlendingEnabled=true
-            ca?.rgbBlendOperation=MTLBlendOperation.add
-            ca?.alphaBlendOperation=MTLBlendOperation.add
-            ca?.sourceRGBBlendFactor=MTLBlendFactor.zero
-            ca?.destinationRGBBlendFactor=MTLBlendFactor.one
-            ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
-            ca?.destinationAlphaBlendFactor=MTLBlendFactor.zero
-            break
-        case BlendMode.add:
-            ca?.isBlendingEnabled=true
-            ca?.rgbBlendOperation=MTLBlendOperation.add
-            ca?.alphaBlendOperation=MTLBlendOperation.add
-            ca?.sourceRGBBlendFactor=MTLBlendFactor.one
-            ca?.destinationRGBBlendFactor=MTLBlendFactor.one
-            ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
-            ca?.destinationAlphaBlendFactor=MTLBlendFactor.one
-            break
-        case BlendMode.sub:
-            ca?.isBlendingEnabled=true
-            ca?.rgbBlendOperation=MTLBlendOperation.reverseSubtract
-            ca?.alphaBlendOperation=MTLBlendOperation.add
-            ca?.sourceRGBBlendFactor=MTLBlendFactor.one
-            ca?.destinationRGBBlendFactor=MTLBlendFactor.one
-            ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
-            ca?.destinationAlphaBlendFactor=MTLBlendFactor.one
-            break
-        default:    // BlendMode.Copy
-            ca?.isBlendingEnabled=false
-            break
-        }
-        pipe.vertexFunction=library.lib!.makeFunction(name: vertex)!
-        pipe.fragmentFunction=library.lib!.makeFunction(name: fragment)!
-        pipe.vertexDescriptor=vdesc
-        pipe.depthAttachmentPixelFormat = .depth32Float
-        do {
-            try rps=viewport!.gpu.device!.makeRenderPipelineState(descriptor: pipe)
-        } catch {
-            Debug.error("error: Program.initSelf()")
-        }
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public static func VertexDescriptor(_ fmt:[MTLVertexFormat]) -> MTLVertexDescriptor {
-        let vd=MTLVertexDescriptor()
-        var off=0
-        var i=0
-        for f in fmt {
-            vd.attributes[i].bufferIndex=0
-            vd.attributes[i].offset=off
-            vd.attributes[i].format=f
-            i += 1
-            off+=SizeOf(f)
-        }
-        vd.layouts[0].stepFunction = .perVertex
-        vd.layouts[0].stride=off
-        return vd
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public static func SizeOf(_ f:MTLVertexFormat) -> Int {
-        switch f {
-        case MTLVertexFormat.float:
-            return 1*4
-        case MTLVertexFormat.float2:
-            return 2*4
-        case MTLVertexFormat.float3:
-            return 3*4
-        case MTLVertexFormat.float4:
-            return 4*4
-        default:
-            Debug.notImplemented()
-            return 0
-        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public static func populateDefaultBlendModes(store:NodeUI,key:String,library:ProgramLibrary,vertex:String,fragment:String,fmt:[MTLVertexFormat]) {
-        for bm in BlendMode.defaultModes {
-            store[Program.fullKey(key,blend:bm)] = Program(library:library,vertex:vertex,fragment:fragment,blend:bm,fmt:fmt)
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public class DepthStencilState : NodeUI {
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public enum Mode {
+            case none
+            case greater
+            case lesser
+            case all
+        }
+            var state:MTLDepthStencilState
+            public init(viewport:Viewport,mode:Mode,write:Bool) {
+                let d=MTLDepthStencilDescriptor()
+                d.isDepthWriteEnabled = write
+                switch mode {
+                case .none:
+                    d.depthCompareFunction = .never
+                case .greater:
+                    d.depthCompareFunction = .greaterEqual
+                case .lesser:
+                    d.depthCompareFunction = .lessEqual
+                case .all:
+                    d.depthCompareFunction = .always
+                }
+                state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
+                super.init(parent:viewport)
+            }
+            public init(viewport:Viewport) {
+                let d=MTLDepthStencilDescriptor()
+                d.isDepthWriteEnabled = false
+                d.depthCompareFunction = .always
+                state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
+                super.init(parent:viewport)
+            }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public class Program : NodeUI {
+        
+        // TODO: MetaProgram using MTLRenderPipelineReflection
+        
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        var rps:MTLRenderPipelineState?
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[MTLVertexFormat]) {
+            super.init(parent:viewport)
+            self.initSelf(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt))
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,vdesc:MTLVertexDescriptor) {
+            super.init(parent:viewport)
+            self.initSelf(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:vdesc)
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[MTLVertexFormat]) {
+            super.init(parent:library)
+            self.initSelf(library,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt))
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        private func initSelf(_ library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,vdesc:MTLVertexDescriptor) {
+            let pipe=MTLRenderPipelineDescriptor()
+            let ca=pipe.colorAttachments[0]
+            ca?.pixelFormat=MTLPixelFormat.bgra8Unorm
+            switch blend {
+            case BlendMode.opaque:
+                ca?.isBlendingEnabled=true
+                ca?.rgbBlendOperation=MTLBlendOperation.add
+                ca?.alphaBlendOperation=MTLBlendOperation.max
+                ca?.sourceRGBBlendFactor=MTLBlendFactor.one
+                ca?.destinationRGBBlendFactor=MTLBlendFactor.zero
+                ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
+                ca?.destinationAlphaBlendFactor=MTLBlendFactor.one
+                break
+            case BlendMode.alpha:
+                ca?.isBlendingEnabled=true
+                ca?.rgbBlendOperation=MTLBlendOperation.add
+                ca?.alphaBlendOperation=MTLBlendOperation.max
+                ca?.sourceRGBBlendFactor=MTLBlendFactor.sourceAlpha
+                ca?.destinationRGBBlendFactor=MTLBlendFactor.oneMinusSourceAlpha
+                ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
+                ca?.destinationAlphaBlendFactor=MTLBlendFactor.one
+                break
+            case BlendMode.setAlpha:
+                ca?.isBlendingEnabled=true
+                ca?.rgbBlendOperation=MTLBlendOperation.add
+                ca?.alphaBlendOperation=MTLBlendOperation.add
+                ca?.sourceRGBBlendFactor=MTLBlendFactor.zero
+                ca?.destinationRGBBlendFactor=MTLBlendFactor.one
+                ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
+                ca?.destinationAlphaBlendFactor=MTLBlendFactor.zero
+                break
+            case BlendMode.add:
+                ca?.isBlendingEnabled=true
+                ca?.rgbBlendOperation=MTLBlendOperation.add
+                ca?.alphaBlendOperation=MTLBlendOperation.add
+                ca?.sourceRGBBlendFactor=MTLBlendFactor.one
+                ca?.destinationRGBBlendFactor=MTLBlendFactor.one
+                ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
+                ca?.destinationAlphaBlendFactor=MTLBlendFactor.one
+                break
+            case BlendMode.sub:
+                ca?.isBlendingEnabled=true
+                ca?.rgbBlendOperation=MTLBlendOperation.reverseSubtract
+                ca?.alphaBlendOperation=MTLBlendOperation.add
+                ca?.sourceRGBBlendFactor=MTLBlendFactor.one
+                ca?.destinationRGBBlendFactor=MTLBlendFactor.one
+                ca?.sourceAlphaBlendFactor=MTLBlendFactor.one
+                ca?.destinationAlphaBlendFactor=MTLBlendFactor.one
+                break
+            default:    // BlendMode.Copy
+                ca?.isBlendingEnabled=false
+                break
+            }
+            pipe.vertexFunction=library.lib!.makeFunction(name: vertex)!
+            pipe.fragmentFunction=library.lib!.makeFunction(name: fragment)!
+            pipe.vertexDescriptor=vdesc
+            pipe.depthAttachmentPixelFormat = .depth32Float
+            do {
+                try rps=viewport!.gpu.device!.makeRenderPipelineState(descriptor: pipe)
+            } catch {
+                Debug.error("error: Program.initSelf()")
+            }
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static func VertexDescriptor(_ fmt:[MTLVertexFormat]) -> MTLVertexDescriptor {
+            let vd=MTLVertexDescriptor()
+            var off=0
+            var i=0
+            for f in fmt {
+                vd.attributes[i].bufferIndex=0
+                vd.attributes[i].offset=off
+                vd.attributes[i].format=f
+                i += 1
+                off+=SizeOf(f)
+            }
+            vd.layouts[0].stepFunction = .perVertex
+            vd.layouts[0].stride=off
+            return vd
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static func SizeOf(_ f:MTLVertexFormat) -> Int {
+            switch f {
+            case MTLVertexFormat.float:
+                return 1*4
+            case MTLVertexFormat.float2:
+                return 2*4
+            case MTLVertexFormat.float3:
+                return 3*4
+            case MTLVertexFormat.float4:
+                return 4*4
+            default:
+                Debug.notImplemented()
+                return 0
+            }
+            //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static func populateDefaultBlendModes(store:NodeUI,key:String,library:ProgramLibrary,vertex:String,fragment:String,fmt:[MTLVertexFormat]) {
+            for bm in BlendMode.defaultModes {
+                store[Program.fullKey(key,blend:bm)] = Program(library:library,vertex:vertex,fragment:fragment,blend:bm,fmt:fmt)
+            }
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public static func fullKey(_ key:String,blend:BlendMode) -> String{
+            switch blend {
+            case BlendMode.opaque:
+                return key+".opaque"
+            case BlendMode.alpha:
+                return key+".alpha"
+            case BlendMode.setAlpha:
+                return key+".setalpha"
+            case BlendMode.color:
+                return key+".color"
+            case BlendMode.add:
+                return key+".add"
+            case BlendMode.sub:
+                return key+".sub"
+            default:
+                return key+".copy"
+            }
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public static func fullKey(_ key:String,blend:BlendMode) -> String{
-        switch blend {
-        case BlendMode.opaque:
-            return key+".opaque"
-        case BlendMode.alpha:
-            return key+".alpha"
-        case BlendMode.setAlpha:
-            return key+".setalpha"
-        case BlendMode.color:
-            return key+".color"
-        case BlendMode.add:
-            return key+".add"
-        case BlendMode.sub:
-            return key+".sub"
-        default:
-            return key+".copy"
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public class Buffer : NodeUI {
+        var b:MTLBuffer
+        init(buffers:Buffers,size:Int) {
+            b=buffers.viewport!.gpu.device!.makeBuffer(length:size,options:MTLResourceOptions())!
+            super.init(parent:buffers)
+        }
+        override public func detach() {
+            if let bs=parent as? Buffers {
+                bs.set(self)
+            }
+            super.detach()
+        }
+        public var ptr:UnsafeMutableRawPointer {
+            return b.contents()
+        }
+        public var size:Int {
+            return b.length
         }
     }
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Buffer : NodeUI {
-    var b:MTLBuffer
-    init(buffers:Buffers,size:Int) {
-        b=buffers.viewport!.gpu.device!.makeBuffer(length:size,options:MTLResourceOptions())!
-        super.init(parent:buffers)
-    }
-    override public func detach() {
-        if let bs=parent as? Buffers {
-            bs.set(self)
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public class Buffers : NodeUI {
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        let lock=Lock()
+        var bl=[Int:Set<Buffer>]()
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        init(viewport:Viewport) {
+            super.init(parent:viewport)
         }
-        super.detach()
-    }
-    public var ptr:UnsafeMutableRawPointer {
-        return b.contents()
-    }
-    public var size:Int {
-        return b.length
-    }
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Buffers : NodeUI {
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    let lock=Lock()
-    var bl=[Int:Set<Buffer>]()
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    init(viewport:Viewport) {
-        super.init(parent:viewport)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func get(_ size:Int, persistent:Bool=false) -> Buffer {
-        let sz = persistent ? size : (size<16384 ? (size<512 ? ((size / 32) + 1) * 32 : ((size / 1024) + 1) * 1024) : (size / 32768 + 1) * 32768)
-        var b:Buffer?
-        lock.synced {
-            if self.bl[sz] != nil {
-                if let b0=self.bl[sz]!.first {
-                    self.bl[sz]!.remove(b0)
-                    b=b0
-                    return
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func get(_ size:Int, persistent:Bool=false) -> Buffer {
+            let sz = persistent ? size : (size<16384 ? (size<512 ? ((size / 32) + 1) * 32 : ((size / 1024) + 1) * 1024) : (size / 32768 + 1) * 32768)
+            var b:Buffer?
+            lock.synced {
+                if self.bl[sz] != nil {
+                    if let b0=self.bl[sz]!.first {
+                        self.bl[sz]!.remove(b0)
+                        b=b0
+                        return
+                    }
+                }
+                b=Buffer(buffers:self,size:sz)
+                //Debug.info("new gpu buffer, size: \(size)")
+            }
+            return b!
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        public func set(_ b:Buffer) {
+            lock.synced {
+                if self.bl[b.size] != nil {
+                    #if DEBUG
+                    if self.bl[b.size]!.contains(b) {
+                        Debug.error("buffer already in pool",#file,#line)
+                        return
+                    }
+                    #endif
+                    self.bl[b.size]!.insert(b)
+                } else {
+                    self.bl[b.size]=Set<Buffer>()
+                    self.bl[b.size]!.insert(b)
                 }
             }
-            b=Buffer(buffers:self,size:sz)
-            //Debug.info("new gpu buffer, size: \(size)")
         }
-        return b!
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func set(_ b:Buffer) {
-        lock.synced {
-            if self.bl[b.size] != nil {
-                #if DEBUG
-                if self.bl[b.size]!.contains(b) {
-                    Debug.error("buffer already in pool",#file,#line)
-                    return
-                }
-                #endif
-                self.bl[b.size]!.insert(b)
-            } else {
-                self.bl[b.size]=Set<Buffer>()
-                self.bl[b.size]!.insert(b)
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public class ProgramLibrary : NodeUI {
+        var lib:MTLLibrary?
+        public init(parent:NodeUI,filename:String="default") {
+            super.init(parent:parent)
+            let bundle = Bundle(for: type(of:parent))
+            let libpath = bundle.path(forResource: filename, ofType: "metallib")!
+            do {
+                lib = try viewport!.gpu.device!.makeLibrary(filepath: libpath)
+            } catch {
+                Debug.error("can't load metal library \(filename) in \(bundle.infoDictionary!["CFBundleName"]!)")
             }
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class ProgramLibrary : NodeUI {
-    var lib:MTLLibrary?
-    public init(parent:NodeUI,filename:String="default") {
-        super.init(parent:parent)
-        let bundle = Bundle(for: type(of:parent))
-        let libpath = bundle.path(forResource: filename, ofType: "metallib")!
-        do {
-            lib = try viewport!.gpu.device!.makeLibrary(filepath: libpath)
-        } catch {
-            Debug.error("can't load metal library \(filename) in \(bundle.infoDictionary!["CFBundleName"]!)")
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+#else
+    public class RenderPass : NodeUI {
+        public enum Result {
+            case error
+            case discarded
+            case success
+        }
+        public enum CullMode {
+            case none
+            case front
+            case back
+        }
+        public enum Winding {
+            case clockwise
+            case counterClockwise
+        }
+        public let onDone=Event<Result>()
+        func use(_ sampler:Sampler, atIndex index:Int=0) {
+        }
+        public func commit() {
+        }
+        public func use(program:Program) {
+        }
+        public func use(state:DepthStencilState) {
+        }
+        public func use(vertexBuffer buffer:Buffer,atIndex index:Int) {
+        }
+        public func use(fragmentBuffer fragment:Buffer,atIndex index:Int) {
+        }
+        public func use(texture:Texture2D, atIndex index:Int=0) {
+        }
+        public func use(vertexTexture vt: Texture2D, atIndex index:Int=0) {
+        }
+        public func draw(triangle n:Int) {
+        }
+        public func draw(trianglestrip n:Int) {
+        }
+        public func draw(triangle n:Int,index:Buffer) {
+        }
+        public func draw(line n:Int) {
+        }
+        public func draw(sprite n:Int) {
+        }
+        public func clip(rect r:Rect) {
+        }
+        public func set(cull:CullMode) {
+        }
+        public func set(front:Winding) {
+        }
+        init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
+            super.init(parent:texture)
+        }
+        /*
+        init(viewport:Viewport,clear:Color?=nil,depthClear:Double=1.0,descriptor:MTLRenderPassDescriptor,drawable:CAMetalDrawable,depth:MTLTexture?=nil) {
+            super.init(parent:viewport)
+        }
+        */
+    }
+    class Sampler : NodeUI {
+        enum Mode {
+            case clamp
+            case wrap
+            case mirror
+        }
+        init(viewport:Viewport,modeX:Mode,modeY:Mode) {
+            super.init(parent:viewport)
         }
     }
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public class DepthStencilState : NodeUI {
+        public enum Mode {
+            case none
+            case greater
+            case lesser
+            case all
+        }
+            public init(viewport:Viewport,mode:Mode,write:Bool) {
+                super.init(parent:viewport)
+            }
+            public init(viewport:Viewport) {
+                super.init(parent:viewport)
+            }
+    }
+    public class Buffer : NodeUI {
+        init(buffers:Buffers,size:Int) {
+            super.init(parent:buffers)
+        }
+        override public func detach() {
+            if let bs=parent as? Buffers {
+                bs.set(self)
+            }
+            super.detach()
+        }
+        public var ptr:UnsafeMutableRawPointer {
+            let wob = 0
+            return UnsafeMutableRawPointer(wob)
+        }
+        public var size:Int {
+            return 0
+        }
+    }
+    public class Buffers : NodeUI {
+        let lock=Lock()
+        var bl=[Int:Set<Buffer>]()
+        init(viewport:Viewport) {
+            super.init(parent:viewport)
+        }
+        public func get(_ size:Int, persistent:Bool=false) -> Buffer {
+            let sz = persistent ? size : (size<16384 ? (size<512 ? ((size / 32) + 1) * 32 : ((size / 1024) + 1) * 1024) : (size / 32768 + 1) * 32768)
+            var b:Buffer?
+            lock.synced {
+                if self.bl[sz] != nil {
+                    if let b0=self.bl[sz]!.first {
+                        self.bl[sz]!.remove(b0)
+                        b=b0
+                        return
+                    }
+                }
+                b=Buffer(buffers:self,size:sz)
+            }
+            return b!
+        }
+        public func set(_ b:Buffer) {
+            lock.synced {
+                if self.bl[b.size] != nil {
+                    #if DEBUG
+                        if self.bl[b.size]!.contains(b) {
+                            Debug.error("buffer already in pool",#file,#line)
+                            return
+                        }
+                    #endif
+                    self.bl[b.size]!.insert(b)
+                } else {
+                    self.bl[b.size]=Set<Buffer>()
+                    self.bl[b.size]!.insert(b)
+                }
+            }
+        }
+    }
+    public enum VertexFormat {
+        case float
+        case float2
+        case float3
+        case float4
+    }
+    public class Program : NodeUI {
+        public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
+            super.init(parent:viewport)
+        }
+        public init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
+            super.init(parent:library)
+        }
+        public static func populateDefaultBlendModes(store:NodeUI,key:String,library:ProgramLibrary,vertex:String,fragment:String,fmt:[VertexFormat]) {
+            for bm in BlendMode.defaultModes {
+                store[Program.fullKey(key,blend:bm)] = Program(library:library,vertex:vertex,fragment:fragment,blend:bm,fmt:fmt)
+            }
+        }
+        public static func fullKey(_ key:String,blend:BlendMode) -> String{
+            switch blend {
+            case BlendMode.opaque:
+                return key+".opaque"
+            case BlendMode.alpha:
+                return key+".alpha"
+            case BlendMode.setAlpha:
+                return key+".setalpha"
+            case BlendMode.color:
+                return key+".color"
+            case BlendMode.add:
+                return key+".add"
+            case BlendMode.sub:
+                return key+".sub"
+            default:
+                return key+".copy"
+            }
+        }
+    }
+    public class ProgramLibrary : NodeUI {
+        public init(parent:NodeUI,filename:String="default") {
+            super.init(parent:parent)
+        }
+    }
+#endif

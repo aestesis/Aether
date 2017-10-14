@@ -28,6 +28,7 @@ import Foundation
     import CoreGraphics
     import UIKit
 #else
+    import Uridium
 #endif
 
 
@@ -46,9 +47,9 @@ open class Texture2D : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     #if os(macOS) || os(iOS) || os(tvOS)
-    public private(set) var texture:MTLTexture?
+        public private(set) var texture:MTLTexture?
     #else
-    public private(set) var texture:Tin.Texture?
+        public private(set) var texture:Tin.Texture?
     #endif
     public private(set) var pixels:Size=Size.zero
     public private(set) var pixel:Size=Size.unity
@@ -196,7 +197,7 @@ open class Texture2D : NodeUI {
                     Debug.error("can't load texture: Texture detached (no viewport)",#file,#line)
                 }
             }
-        #else
+        #elseif os(macOS)
             if let ns=NSImage(data:data), let cg=ns.cgImage(forProposedRect: nil,context:nil,hints:nil) {
                 if viewport != nil {
                     initialize(from: cg)
@@ -204,51 +205,55 @@ open class Texture2D : NodeUI {
                     Debug.error("can't load texture: Texture detached (no viewport)",#file,#line)
                 }
             }
+        #else
+            Debug.notImplemented()
         #endif
     }
-    static var memoCG=[[UInt32]]()
-    public var cg : CGImage? {
-        var data = self.get()
-        for i in 0..<data!.count {
-            var c = Color(abgr:data![i])
-            c.r *= c.a
-            c.g *= c.a
-            c.b *= c.a
-            data![i] = c.rgba
-        }
-        Texture2D.memoCG.append(data!)
-        let cs = CGColorSpaceCreateDeviceRGB()
-        let bitmapInfo:CGBitmapInfo = CGBitmapInfo(rawValue:CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue)
-        let selftureSize = self.pixels.width * self.pixels.height * 4
-        let rowBytes = self.pixels.width * 4
-        let provider = CGDataProvider(dataInfo: nil, data: UnsafeMutablePointer(mutating:Texture2D.memoCG.last!)!, size: Int(selftureSize), releaseData: { u,d,c in
-            for i in 0..<Texture2D.memoCG.count {
-                if &Texture2D.memoCG[i] == d {
-                    Texture2D.memoCG.remove(at: i)
-                    break
+    #if os(macOS) || os(iOS) || os(tvOS)
+        static var memoCG=[[UInt32]]()
+        public var cg : CGImage? {
+            var data = self.get()
+            for i in 0..<data!.count {
+                var c = Color(abgr:data![i])
+                c.r *= c.a
+                c.g *= c.a
+                c.b *= c.a
+                data![i] = c.rgba
+            }
+            Texture2D.memoCG.append(data!)
+            let cs = CGColorSpaceCreateDeviceRGB()
+            let bitmapInfo:CGBitmapInfo = CGBitmapInfo(rawValue:CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue)
+            let selftureSize = self.pixels.width * self.pixels.height * 4
+            let rowBytes = self.pixels.width * 4
+            let provider = CGDataProvider(dataInfo: nil, data: UnsafeMutablePointer(mutating:Texture2D.memoCG.last!)!, size: Int(selftureSize), releaseData: { u,d,c in
+                for i in 0..<Texture2D.memoCG.count {
+                    if &Texture2D.memoCG[i] == d {
+                        Texture2D.memoCG.remove(at: i)
+                        break
+                    }
                 }
-            }
-        })
-        return CGImage(width: Int(self.pixels.width), height: Int(self.pixels.height), bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: Int(rowBytes), space: cs, bitmapInfo: bitmapInfo, provider: provider!, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
-    }
+            })
+            return CGImage(width: Int(self.pixels.width), height: Int(self.pixels.height), bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: Int(rowBytes), space: cs, bitmapInfo: bitmapInfo, provider: provider!, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+        }
+    #endif
     #if os(iOS) || os(tvOS)
-    public var system : UIImage? {
-        get {
-            if let cg = self.cg {
-                return UIImage(cgImage: cg)
+        public var system : UIImage? {
+            get {
+                if let cg = self.cg {
+                    return UIImage(cgImage: cg)
+                }
+                return nil
             }
-            return nil
         }
-    }
     #elseif os(OSX)
-    public var system : NSImage? {
-        get {
-            if let cg = self.cg {
-                return NSImage(cgImage: cg, size: NSSize(width: CGFloat(cg.width), height: CGFloat(cg.height)))
+        public var system : NSImage? {
+            get {
+                if let cg = self.cg {
+                    return NSImage(cgImage: cg, size: NSSize(width: CGFloat(cg.width), height: CGFloat(cg.height)))
+                }
+                return nil
             }
-            return nil
         }
-    }
     #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -272,15 +277,17 @@ open class Texture2D : NodeUI {
         super.init(parent:parent)
         self.scale = texture.scale
     }
-    public init(parent:NodeUI,size:Size,scale:Size=Size(1,1),texture:MTLTexture,file:String=#file,line:Int=#line) {
-        #if DEBUG
-            self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
-        #endif
-        self.pixels = size * scale
-        self.texture = texture
-        super.init(parent:parent)
-        self.scale = scale
-    }
+    #if os(macOS) || os(iOS) || os(tvOS)
+        public init(parent:NodeUI,size:Size,scale:Size=Size(1,1),texture:MTLTexture,file:String=#file,line:Int=#line) {
+            #if DEBUG
+                self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
+            #endif
+            self.pixels = size * scale
+            self.texture = texture
+            super.init(parent:parent)
+            self.scale = scale
+        }
+    #endif
     public init(parent:NodeUI,size:Size,scale:Size=Size(1,1),border:Size=Size.zero,format:Format = .rgba,file:String=#file,line:Int=#line) {
         #if DEBUG
             self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"

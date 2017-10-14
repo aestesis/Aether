@@ -38,23 +38,23 @@ public class Viewport : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     class GPU {
         #if os(macOS) || os(iOS) || os(tvOS)
-        var device:MTLDevice?
-        var queue:MTLCommandQueue {
-            let key="aestesis.alib.Viewport.GPU.queue"
-            if let q=Thread.current[key] as? MTLCommandQueue {
-                return q;
+            var device:MTLDevice?
+            var queue:MTLCommandQueue {
+                let key="aestesis.alib.Viewport.GPU.queue"
+                if let q=Thread.current[key] as? MTLCommandQueue {
+                    return q;
+                }
+                Debug.info("Viewport.GPU: new command queue for thread")
+                let q=device!.makeCommandQueue()
+                Thread.current[key]=q
+                return q!
             }
-            Debug.info("Viewport.GPU: new command queue for thread")
-            let q=device!.makeCommandQueue()
-            Thread.current[key]=q
-            return q!
-        }
-        var library:ProgramLibrary?
-        var loader:MTKTextureLoader?
+            var loader:MTKTextureLoader?
         #else
-        var tin:Tin?
-        // TODO:
+            var tin:Tin?
+            // TODO:
         #endif
+        var library:ProgramLibrary?
         var buffers:Buffers?
         var tess:Tess {
             let key="aestesis.alib.Viewport.GPU.libtess"
