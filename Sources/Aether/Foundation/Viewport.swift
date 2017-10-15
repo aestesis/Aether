@@ -473,58 +473,58 @@ public class Viewport : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     #if os(macOS) || os(iOS) || os(tvOS)
-    init(systemView:SystemView,device:MTLDevice,size:Size,scale:Size=Size(1,1),pixsize:Size? = nil) {
-        self.scale=scale
-        self.systemView=systemView
-        if let ps = pixsize {
-            self.pixsize = ps
-        } else {
-            self.pixsize = Size(1,1)/scale
+        init(systemView:SystemView,device:MTLDevice,size:Size,scale:Size=Size(1,1),pixsize:Size? = nil) {
+            self.scale=scale
+            self.systemView=systemView
+            if let ps = pixsize {
+                self.pixsize = ps
+            } else {
+                self.pixsize = Size(1,1)/scale
+            }
+            super.init(parent:nil)
+            Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
+            gpu.device=device
+            gpu.loader=MTKTextureLoader(device:device)
+            _size=size
+            gpu.library=ProgramLibrary(parent:self,filename:"default")
+            gpu.buffers=Buffers(viewport:self)
+            Graphics.globals(self)
+            Renderer.globals(self)
+            Effect.globals(self)
+            let nt = max(1,ProcessInfo.processInfo.activeProcessorCount/3)
+            _bg = Worker(parent:self,threads: nt)
+            _io = Worker(parent:self,threads: nt)
+            _zz = Worker(parent:self,threads: 1)
+            Debug.warning("Workers launched, bg:\(nt) io:\(nt) zz:1 cpus:\(ProcessInfo.processInfo.activeProcessorCount)")
+            refreshThread()
+            Alib.Thread.current["ui.thread"]=true
         }
-        super.init(parent:nil)
-        Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
-        gpu.device=device
-        gpu.loader=MTKTextureLoader(device:device)
-        _size=size
-        gpu.library=ProgramLibrary(parent:self,filename:"default")
-        gpu.buffers=Buffers(viewport:self)
-        Graphics.globals(self)
-        Renderer.globals(self)
-        Effect.globals(self)
-        let nt = max(1,ProcessInfo.processInfo.activeProcessorCount/3)
-        _bg = Worker(parent:self,threads: nt)
-        _io = Worker(parent:self,threads: nt)
-        _zz = Worker(parent:self,threads: 1)
-        Debug.warning("Workers launched, bg:\(nt) io:\(nt) zz:1 cpus:\(ProcessInfo.processInfo.activeProcessorCount)")
-        refreshThread()
-        Alib.Thread.current["ui.thread"]=true
-    }
     #else 
-    init(systemView:SystemView,tin:Tin,size:Size,scale:Size=Size(1,1),pixsize:Size? = nil) {
-        self.scale=scale
-        self.systemView=systemView
-        if let ps = pixsize {
-            self.pixsize = ps
-        } else {
-            self.pixsize = Size(1,1)/scale
+        init(systemView:SystemView,tin:Tin,size:Size,scale:Size=Size(1,1),pixsize:Size? = nil) {
+            self.scale=scale
+            self.systemView=systemView
+            if let ps = pixsize {
+                self.pixsize = ps
+            } else {
+                self.pixsize = Size(1,1)/scale
+            }
+            super.init(parent:nil)
+            Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
+            gpu.tin=tin
+            _size=size
+            //gpu.library=ProgramLibrary(parent:self,filename:"default")
+            gpu.buffers=Buffers(viewport:self)
+            Graphics.globals(self)
+            Renderer.globals(self)
+            Effect.globals(self)
+            let nt = max(1,ProcessInfo.processInfo.activeProcessorCount/3)
+            _bg = Worker(parent:self,threads: nt)
+            _io = Worker(parent:self,threads: nt)
+            _zz = Worker(parent:self,threads: 1)
+            Debug.warning("Workers launched, bg:\(nt) io:\(nt) zz:1 cpus:\(ProcessInfo.processInfo.activeProcessorCount)")
+            refreshThread()
+            Thread.current["ui.thread"]=true
         }
-        super.init(parent:nil)
-        Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
-        gpu.tin=tin
-        _size=size
-        //gpu.library=ProgramLibrary(parent:self,filename:"default")
-        gpu.buffers=Buffers(viewport:self)
-        Graphics.globals(self)
-        Renderer.globals(self)
-        Effect.globals(self)
-        let nt = max(1,ProcessInfo.processInfo.activeProcessorCount/3)
-        _bg = Worker(parent:self,threads: nt)
-        _io = Worker(parent:self,threads: nt)
-        _zz = Worker(parent:self,threads: 1)
-        Debug.warning("Workers launched, bg:\(nt) io:\(nt) zz:1 cpus:\(ProcessInfo.processInfo.activeProcessorCount)")
-        refreshThread()
-        Thread.current["ui.thread"]=true
-    }
     #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
