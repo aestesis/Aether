@@ -24,7 +24,6 @@ import SwiftyJSON
     import AppKit
 #elseif os(iOS) || os(tvOS)
     import UIKit
-#elseif os(Linux)
 #endif
 
 public class Application {
@@ -49,13 +48,25 @@ public class Application {
         return Bundle.main.bundleIdentifier!
     }
     public static var name:String {
-        return Bundle.main.infoDictionary!["CFBundleName"] as! String
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Bundle.main.infoDictionary!["CFBundleName"] as! String
+        #else
+            return "Application.name"
+        #endif
     }
     public static var version:String {
-        return Bundle.main.infoDictionary!["CFBundleShortVersionString"] as! String
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Bundle.main.infoDictionary!["CFBundleShortVersionString"] as! String
+        #else
+            return "Application.version"
+        #endif
     }
     public static var build:String {
-        return Bundle.main.infoDictionary!["CFBundleVersion"] as! String
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return Bundle.main.infoDictionary!["CFBundleVersion"] as! String
+        #else
+            return "Application.build"
+        #endif
     }
     #if os(OSX) || os(iOS)
     public subscript(key: String) -> String? {

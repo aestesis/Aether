@@ -38,7 +38,7 @@ public class Debug {
     }
     public static func info(_ t:String,_ f:String=#file,_ l:Int=#line) {
         #if DEBUG
-        log("🗯 \(t)  \(truncfile(f)):\(l)")
+            log("🗯 \(t)  \(truncfile(f)):\(l)")
         #endif
     }
     public static func warning(_ t:String,_ f:String=#file,_ l:Int=#line) {
