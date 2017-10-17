@@ -681,7 +681,8 @@ import Foundation
             super.detach()
         }
         public var ptr:UnsafeMutableRawPointer {
-            return UnsafeMutableRawPointer(&wob)
+            Debug.notImplemented()
+            return UnsafeMutableRawPointer(&wob)    // TODO:
         }
         public var size:Int {
             return 0

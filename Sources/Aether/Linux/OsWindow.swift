@@ -21,6 +21,9 @@
 import Uridium
 
 public class OsWindow : Window,SystemView {
+    public let onStartUI = Event<Viewport>()
+    public let onMove = Event<Rect>()
+    public let onResize = Event<Rect>()
     public var viewport:Viewport?
     public var orientation : Orientation {
         return Orientation.portraitBottom
@@ -42,9 +45,9 @@ public class OsWindow : Window,SystemView {
     public func captureBackButton(_ capture:Bool) {
     }
     public override func render() {
-        /*
         if viewport == nil {
             viewport = Viewport(systemView:self,tin:engine!,size:Size(Double(width),Double(height)))
+            self.onStartUI.dispatch(viewport!)
         }
         if let vp=viewport {
             let size = Size(Double(width),Double(height))
@@ -53,7 +56,6 @@ public class OsWindow : Window,SystemView {
             vp.update()
             vp.draw()
         }
-        */
     }
     public override init?(title:String,width:Int,height:Int) {
         super.init(title:title,width:width,height:height)

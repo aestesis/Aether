@@ -43,9 +43,6 @@ public struct Size :  CustomStringConvertible,JsonConvertible {
         set(h) { height=h; }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var aera: Double {
-        return width*height
-    }
     public var ceil: Size {
         return Size(Foundation.ceil(width),Foundation.ceil(height))
     }
