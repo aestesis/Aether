@@ -105,7 +105,6 @@ public class Application {
         Application.getJSON(Application.localPath(".defaults.json")) { json in
             for (k,v) in json.dictionaryValue {
                 self.def[k] = v.stringValue
-                //Debug.info("loaded db[\(k)]")
             }
             self.loaded = true
         Debug.warning("Application.db: loaded")
@@ -133,7 +132,7 @@ public class Application {
         }
     }
     public static func localPath(_ path:String) -> String {
-        #if os(OSX) || os(Linux)
+        #if os(OSX)
             let sup=NSSearchPathForDirectoriesInDomains(FileManager.SearchPathDirectory.applicationSupportDirectory, FileManager.SearchPathDomainMask.userDomainMask, true)[0]
             let dir=sup+"/"+Bundle.main.bundleIdentifier!+"/"
             let fm=FileManager.default
@@ -152,7 +151,17 @@ public class Application {
             let dir=NSSearchPathForDirectoriesInDomains(FileManager.SearchPathDirectory.cachesDirectory, FileManager.SearchPathDomainMask.userDomainMask, true).last!
             return dir+"/"+path
         #else
-            return "not implemented"
+            let fm = FileManager.default
+            let sup = fm.homeDirectoryForCurrentUser.path
+            let dir = "\(sup)/.aether/\(Application.name)/"
+            if !fm.fileExists(atPath: dir) {
+                do {
+                    try fm.createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: nil)
+                } catch {
+                    Debug.error("can't create app local directory")
+                }
+            }
+            return dir+path
         #endif
     }
     public static func resourcePath(_ path:String) -> String {
@@ -234,6 +243,7 @@ public class Application {
                 Debug.error("can't open \(url) in default browser")
             }
         #else
+            // TODO: launch shell command "gnome-open http://askubuntu.com"
             Debug.notImplemented()
         #endif
     }

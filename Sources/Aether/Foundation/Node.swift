@@ -240,7 +240,6 @@ open class Node:Atom
     public init(parent: Node?) {
         super.init()
         self.parent=parent
-        
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public var attached : Bool {
