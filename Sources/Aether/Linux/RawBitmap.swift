@@ -20,38 +20,32 @@
 import Cpng
 import Foundation
 
-class RawBitmap : Atom {
-    public let onLoaded = Event<Void>()
-    public let onError = Event<Error>()
+public class RawBitmap : Atom {
     public private(set) var size:SizeI
     public private(set) var pixels:[UInt32]
-    public init(width:Int,height:Int) {
+    public init(width:Int,height:Int,pixels:[UInt32]? = nil) {
         self.size = SizeI(width,height)
-        self.pixels = [UInt32](repeating:0,count:size.surface)
+        if let pixels = pixels {
+            self.pixels = pixels
+        } else {
+            self.pixels = [UInt32](repeating:0,count:size.surface)
+        }
         super.init()
     }
-    public init(path:String) {
+    public init?(path:String) {
         let p=Application.resourcePath(path)
         self.size = SizeI.zero
         self.pixels = [UInt32]()
         super.init()
         if FileManager.default.fileExists(atPath:p) {
             let f=FileReader(filename:p)
-            let r=BufferedStream()
-            r.onClose.once {
-                self.readPNG(r)
-            }
-            r.onError.once { err in
-                self.onError.dispatch(err)
-            }
-            f.pipe(to:r)
+            self.readPNG(f)
+            f.close()
         } else {
-            _ = self.wait(0.001) {
-                self.onError.dispatch(Error("File not found: \(p)"))
-            }
+            return nil
         }
     }
-    func readPNG(_ stream:BufferedStream) {
+    func readPNG(_ stream:Stream) {
         var r = stream
         let png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nil, nil, nil)
         let info = png_create_info_struct(png)
@@ -120,9 +114,7 @@ class RawBitmap : Atom {
                     }
                 }
             default:
-            self.onError.dispatch(Error("color format not implemented"))
             return
         }
-        self.onLoaded.dispatch(())
     }
 }

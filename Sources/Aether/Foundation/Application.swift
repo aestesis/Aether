@@ -47,13 +47,14 @@ public class Application {
     public static var id:String {
         return Bundle.main.bundleIdentifier!
     }
-    public static var name:String {
-        #if os(macOS) || os(iOS) || os(tvOS)
+    #if os(macOS) || os(iOS) || os(tvOS)
+        public static var name:String {
             return Bundle.main.infoDictionary!["CFBundleName"] as! String
-        #else
-            return "Application.name"
-        #endif
-    }
+        }
+    #else
+        public static var name:String = "unknown"
+    #endif
+    
     public static var version:String {
         #if os(macOS) || os(iOS) || os(tvOS)
             return Bundle.main.infoDictionary!["CFBundleShortVersionString"] as! String

@@ -68,80 +68,81 @@ open class Texture2D : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     #if os(macOS) || os(iOS) || os(tvOS)
-    internal func initialize(from cg:CGImage) {
-        let pixfmt = MTLPixelFormat.rgba8Unorm // (cg.colorSpace?.model == .rgb) ? MTLPixelFormat.rgba8Unorm : MTLPixelFormat.a8Unorm
-        self.pixels = Size(Double(cg.width),Double(cg.height))
-        let d=MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixfmt, width: cg.width, height: cg.height, mipmapped: false)
-        self.texture=viewport!.gpu.device?.makeTexture(descriptor:d)
-        let isize = cg.width * cg.height
-        if let data = cg.dataProvider?.data {
-            let len = CFDataGetLength(data)
-            if len>=isize*4 {
-                //let ptr = UnsafeMutableRawPointer(mutating:buf).assumingMemoryBound(to: UInt8.self)
-                let bytes = CFDataGetBytePtr(data)
-                switch cg.alphaInfo {
-                case .noneSkipLast,.last:
-                    self.set(raw:bytes!)
-                case .premultipliedLast:
-                    var buf = [UInt8](repeating:0,count:len)
+        internal func initialize(from cg:CGImage) {
+            let pixfmt = MTLPixelFormat.rgba8Unorm // (cg.colorSpace?.model == .rgb) ? MTLPixelFormat.rgba8Unorm : MTLPixelFormat.a8Unorm
+            self.pixels = Size(Double(cg.width),Double(cg.height))
+            let d=MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixfmt, width: cg.width, height: cg.height, mipmapped: false)
+            self.texture=viewport!.gpu.device?.makeTexture(descriptor:d)
+            let isize = cg.width * cg.height
+            if let data = cg.dataProvider?.data {
+                let len = CFDataGetLength(data)
+                if len>=isize*4 {
+                    let bytes = CFDataGetBytePtr(data)
+                    switch cg.alphaInfo {
+                    case .noneSkipLast,.last:
+                        self.set(raw:bytes!)
+                    case .premultipliedLast:
+                        var buf = [UInt8](repeating:0,count:len)
+                        var s = bytes!
+                        var d = 0
+                        for _ in 0..<isize {
+                            let r:Int = Int(s[0])
+                            let g:Int = Int(s[1])
+                            let b:Int = Int(s[2])
+                            let a:Int = Int(s[3])
+                            if a>0 {
+                                buf[d] = UInt8(min(r*255/a,255))
+                                d += 1
+                                buf[d] = UInt8(min(g*255/a,255))
+                                d += 1
+                                buf[d] = UInt8(min(b*255/a,255))
+                                d += 1
+                                buf[d] = UInt8(a)
+                                d += 1
+                            } else {
+                                buf[d] = UInt8(r)
+                                d += 1
+                                buf[d] = UInt8(g)
+                                d += 1
+                                buf[d] = UInt8(b)
+                                d += 1
+                                buf[d] = UInt8(a)
+                                d += 1
+                            }
+                            s = s.advanced(by: 4)
+                        }
+                        self.set(raw:UnsafeRawPointer(buf))
+                        break
+                    default:
+                        Debug.notImplemented(#file,#line)
+                    }
+                } else if len == isize {    // 8 bits
+                    let bytes = CFDataGetBytePtr(data)
+                    var buf = [UInt8](repeating:0,count:len*4)
                     var s = bytes!
                     var d = 0
                     for _ in 0..<isize {
-                        let r:Int = Int(s[0])
-                        let g:Int = Int(s[1])
-                        let b:Int = Int(s[2])
-                        let a:Int = Int(s[3])
-                        if a>0 {
-                            buf[d] = UInt8(min(r*255/a,255))
-                            d += 1
-                            buf[d] = UInt8(min(g*255/a,255))
-                            d += 1
-                            buf[d] = UInt8(min(b*255/a,255))
-                            d += 1
-                            buf[d] = UInt8(a)
-                            d += 1
-                        } else {
-                            buf[d] = UInt8(r)
-                            d += 1
-                            buf[d] = UInt8(g)
-                            d += 1
-                            buf[d] = UInt8(b)
-                            d += 1
-                            buf[d] = UInt8(a)
-                            d += 1
-                        }
-                        s = s.advanced(by: 4)
+                        let v:UInt8 = s[0]
+                        buf[d] = v
+                        d += 1
+                        buf[d] = v
+                        d += 1
+                        buf[d] = v
+                        d += 1
+                        buf[d] = 255
+                        d += 1
+                        s = s.advanced(by: 1)
                     }
                     self.set(raw:UnsafeRawPointer(buf))
-                    break
-                default:
-                    Debug.notImplemented(#file,#line)
+                } else {
+                    Debug.error("image source error: expected \(isize*4) or \(isize) and got \(len) bytes")
                 }
-            } else if len == isize {    // 8 bits
-                let bytes = CFDataGetBytePtr(data)
-                var buf = [UInt8](repeating:0,count:len*4)
-                var s = bytes!
-                var d = 0
-                for _ in 0..<isize {
-                    let v:UInt8 = s[0]
-                    buf[d] = v
-                    d += 1
-                    buf[d] = v
-                    d += 1
-                    buf[d] = v
-                    d += 1
-                    buf[d] = 255
-                    d += 1
-                    s = s.advanced(by: 1)
-                }
-                self.set(raw:UnsafeRawPointer(buf))
-            } else {
-                Debug.error("image source error: expected \(isize*4) or \(isize) and got \(len) bytes")
             }
         }
-    }
     #else
-    // TODO:
+        internal func initialize(from rb:RawBitmap) {
+            texture = Tin.Texture(engine:viewport!.gpu.tin!,width:rb.size.width,height:rb.size.height,pixels:rb.pixels)
+        }
     #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     internal func load(_ filename:String) {
@@ -152,7 +153,7 @@ open class Texture2D : NodeUI {
                 } else if viewport == nil {
                     Debug.error("can't load texture: \(filename), Texture already detached (no viewport)",#file,#line)
                 } else {
-                    Debug.error("can't load texture: \(filename), file not found)",#file,#line)
+                    Debug.error("can't load texture: \(filename), bad file format)",#file,#line)
                 }
             } else {
                 Debug.error("can't load texture: \(filename), file not found)",#file,#line)
@@ -164,14 +165,23 @@ open class Texture2D : NodeUI {
                 } else if viewport == nil {
                     Debug.error("can't load texture: \(filename), Texture detached (no viewport)",#file,#line)
                 } else {
-                    Debug.error("can't load texture: \(filename), file not found)",#file,#line)
+                    Debug.error("can't load texture: \(filename), bad file format)",#file,#line)
                 }
             } else {
                 Debug.error("can't load texture: \(filename), file not found)",#file,#line)
             }
         #else
-            Debug.notImplemented()
-            // TODO:
+            if let rb = RawBitmap(path:Application.resourcePath(filename)) {
+                if viewport != nil && rb.size.width != 0 && rb.size.height != 0 {
+                    initialize(from: rb)
+                } else if viewport == nil {
+                    Debug.error("can't load texture: \(filename), Texture detached (no viewport)",#file,#line)
+                } else {
+                    Debug.error("can't load texture: \(filename), bad file format)",#file,#line)
+                }
+            } else {
+                Debug.error("can't load texture: \(filename), file not found)",#file,#line)
+            }
         #endif
         // decode displaysize&scale from filename eg:  filename.134x68.png -> display=Size(134,68)
         let m=filename.split(".")
@@ -321,9 +331,10 @@ open class Texture2D : NodeUI {
             #if DEBUG
                 self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
             #endif
-            Debug.notImplemented()
-            // TODO:
-            super.init(parent:parent)
+            self.pixels=size*scale
+            super.init(parent: parent)
+            self.scale=scale
+            texture = Tin.Texture(engine:viewport!.gpu.tin!,width:Int(self.pixels.width),height:Int(self.pixel.height))
         }
     #endif
     public init(parent:NodeUI,path:String,border:Size=Size.zero,file:String=#file,line:Int=#line) {
