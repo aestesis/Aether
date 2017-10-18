@@ -65,10 +65,10 @@ public class RawBitmap : Atom {
         var d = 0
         switch colorType {
             case PNG_COLOR_TYPE_RGB:
-                for y in 0..<size.height {
+                for _ in 0..<size.height {
                     png_read_row(png, &row, nil)
                     var s = 0
-                    for x in 0..<size.width {
+                    for _ in 0..<size.width {
                         var c : UInt32 = 255
                         c |= UInt32(row[s]) << 8        // blue
                         s += 1
@@ -81,10 +81,10 @@ public class RawBitmap : Atom {
                     }
                 }
             case PNG_COLOR_TYPE_RGBA:
-                for y in 0..<size.height {
+                for _ in 0..<size.height {
                     png_read_row(png, &row, nil)
                     var s = 0
-                    for x in 0..<size.width {
+                    for _ in 0..<size.width {
                         var c : UInt32 = 0
                         c |= UInt32(row[s]) << 8        // blue
                         s += 1
@@ -99,10 +99,10 @@ public class RawBitmap : Atom {
                     }
                 }
             case PNG_COLOR_TYPE_GRAY:
-                for y in 0..<size.height {
+                for _ in 0..<size.height {
                     png_read_row(png, &row, nil)
                     var s = 0
-                    for x in 0..<size.width {
+                    for _ in 0..<size.width {
                         let l = row[s]
                         s += 1
                         var c : UInt32 = 255

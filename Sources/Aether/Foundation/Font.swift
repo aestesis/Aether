@@ -26,6 +26,7 @@ import Foundation
     import CoreGraphics
     import UIKit
 #else
+    import CPango
 #endif
 
 #if os(iOS) || os(tvOS)
