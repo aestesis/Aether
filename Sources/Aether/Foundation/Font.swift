@@ -297,7 +297,7 @@ import Foundation
         }
         public init(font:Font,size:Double) {
             uifont=UIFont(name: font.name, size: CGFloat(Float(size)))!
-            super.init(parent:font)
+            super.init(parent:font.parent)
         }
         public convenience init(parent:NodeUI,name:String,size:Int) {
             self.init(parent:parent,name:name,size:Double(size))
@@ -513,7 +513,7 @@ import Foundation
         }
         public init(font:Font,size:Double) {
             nsfont=NSFont(name: font.name, size: CGFloat(Float(size)))!
-            super.init(parent:font)
+            super.init(parent:font.parent)
         }
         public convenience init(parent:NodeUI,name:String,size:Int) {
             self.init(parent:parent,name:name,size:Double(size))
@@ -529,46 +529,29 @@ import Foundation
     public class Font : NodeUI {
         static var fmap : OpaquePointer?
         static var families=[String:OpaquePointer]()
-        var sysfont:UInt32 = 0
-        static func initGlobals() {
-            // #define PANGO_RENDER_TYPE_FC "PangoRenderFc"
-            if fmap == nil {
-                fmap = pango_ft2_font_map_new ()
-                var families:UnsafeMutablePointer<OpaquePointer?>?
-                var nfam:Int32 = 0
-                pango_font_map_list_families(fmap,&families,&nfam)
-                for i in 0..<Int(nfam) {
-                    let f = families![i]
-                    let cname = pango_font_family_get_name(f)
-                    let name = String(cString:cname!)
-                    Debug.warning("found font family: \(name)")
-                    Font.families[name] = f
-                }
-                g_free(families)
-            }
-        }
-        public var name:String {
-            return ""
-        }
+        var context : OpaquePointer?
+        var font:OpaquePointer?
+        var metrics:OpaquePointer?
+        public let name:String
         public var familly:String {
             return ""
         }
-        public var size:Double {
-            return 0
-        }
+        public let size:Double
         public var ascender:Double {
-            return 0
+            return Double(pango_font_metrics_get_ascent(metrics))
         }
         public var descender:Double {
-            return 0
+            return Double(pango_font_metrics_get_descent(metrics))
         }
         public var leading:Double {
-            return 0
+            return 0    // TODO: do better
         }
         public var height:Double {
-            return 0
+            return size // TODO: do better
         }
         public func mask(text:String,align:Align=Align.left,width:Double=0,lines:Int=0) -> Bitmap {
+            let ftb = FT_Bitmap
+            FT_Bitmap_Init(&tfb)
             return Bitmap(parent:self.viewport!,size:Size(8,8))
         }
         public func bitmap(text:String,align:Align=Align.left,width:Double=0,color:Color=Color.white,_ bitmap:@escaping (Bitmap)->())  {
@@ -614,12 +597,66 @@ import Foundation
             }
             return lines
         }
+        public override func detach() {
+            if let m = metrics {
+                pango_font_metrics_unref(m)
+                metrics = nil
+            }
+            if font != nil {
+                g_free(&font)
+                font = nil
+            }
+            if var context = context {
+                g_object_unref(&context)
+                self.context = nil
+            }
+            super.detach()
+        }
+        static func initGlobals() {
+            // #define PANGO_RENDER_TYPE_FC "PangoRenderFc"
+            if fmap == nil {
+                fmap = pango_ft2_font_map_new ()
+                var families:UnsafeMutablePointer<OpaquePointer?>?
+                var nfam:Int32 = 0
+                pango_font_map_list_families(fmap,&families,&nfam)
+                for i in 0..<Int(nfam) {
+                    let f = families![i]
+                    let cname = pango_font_family_get_name(f)
+                    let name = String(cString:cname!)
+                    //Debug.warning("found font family: \(name)")
+                    Font.families[name] = f
+                }
+                g_free(families)
+            }
+        }
         public init(parent:NodeUI,name:String,size:Double) {
+            self.size = size
+            context = pango_font_map_create_context(Font.fmap)
             Font.initGlobals()
+            let fm = Font.fonts(matching:name)
+            if fm.count > 0 {
+                self.name = fm[0]
+                let pattern = "\(name) [\(size)]"
+                if let fd = pango_font_description_from_string(pattern.cString(using: .utf8)) {
+                    font = pango_font_map_load_font (Font.fmap,context,fd)
+                    metrics = pango_font_get_metrics(font,nil)
+                    pango_font_description_free(fd)
+                }
+            } else {
+                self.name = "error"
+            }
             super.init(parent:parent)
         }
         public init(font:Font,size:Double) {
-            super.init(parent:font)
+            self.size = size
+            self.name = font.name
+            let pattern = "\(name) [\(size)]"
+            if let fd = pango_font_description_from_string(pattern.cString(using: .utf8)) {
+                self.font = pango_font_map_load_font (Font.fmap,context,fd)
+                metrics = pango_font_get_metrics(self.font,nil)
+                pango_font_description_free(fd)
+            }
+            super.init(parent:font.parent as! NodeUI)
         }
         public convenience init(parent:NodeUI,name:String,size:Int) {
             self.init(parent:parent,name:name,size:Double(size))
@@ -629,7 +666,18 @@ import Foundation
         }
         public static var availableFonts:[String] {
             Font.initGlobals()
-            return []
+            return Array(Font.families.keys).sorted()
+        }
+        public static func fonts(matching s:String) -> [String] {
+            let fonts = Font.availableFonts
+            var matching = [String]()
+            let m = s.lowercased()
+            for f in fonts {
+                if f.lowercased().contains(m) {
+                    matching.append(f)
+                }
+            }
+            return matching
         }
     }
 #endif

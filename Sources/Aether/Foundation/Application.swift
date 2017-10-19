@@ -132,6 +132,14 @@ public class Application {
             Debug.error("can't convert JSON to text",#file,#line);
         }
     }
+    public static func temporaryPath(_ path:String) -> String {
+        let temp = FileManager.default.temporaryDirectory.path
+        return "\(temp)/\(path)"
+    }
+    public static func homePath(_ path:String) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return "\(home)/\(path)"
+    }
     public static func localPath(_ path:String) -> String {
         #if os(OSX)
             let sup=NSSearchPathForDirectoriesInDomains(FileManager.SearchPathDirectory.applicationSupportDirectory, FileManager.SearchPathDomainMask.userDomainMask, true)[0]
