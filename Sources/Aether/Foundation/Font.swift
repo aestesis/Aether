@@ -26,6 +26,7 @@ import Foundation
     import CoreGraphics
     import UIKit
 #else
+    import Cfreetype
     import CPango
 #endif
 
