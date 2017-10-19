@@ -598,6 +598,8 @@ import Foundation
             return lines
         }
         public init(parent:NodeUI,name:String,size:Double) {
+            let fmap = pango_fc_font_map_find_decoder (nil,
+                                nil)
             super.init(parent:parent)
         }
         public init(font:Font,size:Double) {
