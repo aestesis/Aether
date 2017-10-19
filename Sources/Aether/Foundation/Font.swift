@@ -527,9 +527,26 @@ import Foundation
     }
 #else
     public class Font : NodeUI {
-        static var registred=[String:Bool]()
-        //static let nsOptions:NSString.DrawingOptions = [.usesFontLeading,.usesDeviceMetrics,.usesLineFragmentOrigin,.truncatesLastVisibleLine]
+        static var fmap : OpaquePointer?
+        static var families=[String:OpaquePointer]()
         var sysfont:UInt32 = 0
+        static func initGlobals() {
+            // #define PANGO_RENDER_TYPE_FC "PangoRenderFc"
+            if fmap == nil {
+                fmap = pango_ft2_font_map_new ()
+                var families:UnsafeMutablePointer<OpaquePointer?>?
+                var nfam:Int32 = 0
+                pango_font_map_list_families(fmap,&families,&nfam)
+                for i in 0..<Int(nfam) {
+                    let f = families![i]
+                    let cname = pango_font_family_get_name(f)
+                    let name = String(cString:cname!)
+                    Debug.warning("found font family: \(name)")
+                    Font.families[name] = f
+                }
+                g_free(families)
+            }
+        }
         public var name:String {
             return ""
         }
@@ -598,8 +615,7 @@ import Foundation
             return lines
         }
         public init(parent:NodeUI,name:String,size:Double) {
-            let fmap = pango_fc_font_map_find_decoder (nil,
-                                nil)
+            Font.initGlobals()
             super.init(parent:parent)
         }
         public init(font:Font,size:Double) {
@@ -612,6 +628,7 @@ import Foundation
             self.init(font:font,size:Double(size))
         }
         public static var availableFonts:[String] {
+            Font.initGlobals()
             return []
         }
     }
