@@ -512,7 +512,7 @@ public class Viewport : NodeUI {
             Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
             gpu.tin=tin
             _size=size
-            //gpu.library=ProgramLibrary(parent:self,filename:"default")
+            gpu.library=ProgramLibrary(parent:self,filename:"default")
             gpu.buffers=Buffers(viewport:self)
             Graphics.globals(self)
             Renderer.globals(self)

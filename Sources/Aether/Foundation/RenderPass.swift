@@ -572,16 +572,22 @@ import Foundation
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public class ProgramLibrary : NodeUI {
-        var lib:MTLLibrary?
+        #if os(macOS) || os(iOS) || os(tvOS)
+            var lib:MTLLibrary?
+        #else
+        #endif
         public init(parent:NodeUI,filename:String="default") {
             super.init(parent:parent)
-            let bundle = Bundle(for: type(of:parent))
-            let libpath = bundle.path(forResource: filename, ofType: "metallib")!
-            do {
-                lib = try viewport!.gpu.device!.makeLibrary(filepath: libpath)
-            } catch {
-                Debug.error("can't load metal library \(filename) in \(bundle.infoDictionary!["CFBundleName"]!)")
-            }
+            #if os(macOS) || os(iOS) || os(tvOS)
+                let bundle = Bundle(for: type(of:parent))
+                let libpath = bundle.path(forResource: filename, ofType: "metallib")!
+                do {
+                    lib = try viewport!.gpu.device!.makeLibrary(filepath: libpath)
+                } catch {
+                    Debug.error("can't load metal library \(filename) in \(bundle.infoDictionary!["CFBundleName"]!)")
+                }
+            #else
+            #endif
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
