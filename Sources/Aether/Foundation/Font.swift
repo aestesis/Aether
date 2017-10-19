@@ -550,10 +550,46 @@ import Foundation
         public var height:Double {
             return size // TODO: do better
         }
+        func glyphs(text s:String) -> UnsafeMutablePointer<PangoGlyphString>? {
+            let unicode = Array(s.unicodeScalars)
+            let gs = pango_glyph_string_new()
+            pango_glyph_string_set_size(gs,Int32(s.length))
+            for i in 0..<s.length {
+                gs![0].glyphs[i].glyph = UInt32(unicode[i].value)
+            }
+            return gs
+        }
         public func mask(text:String,align:Align=Align.left,width:Double=0,lines:Int=0) -> Bitmap {
-            let ftb = FT_Bitmap
-            FT_Bitmap_Init(&tfb)
-            return Bitmap(parent:self.viewport!,size:Size(8,8))
+            // TODO: use width,lines options
+            let size = self.size(text)
+            var ftb = FT_Bitmap()
+            FT_Bitmap_Init(&ftb)
+            ftb.width = UInt32(size.width)
+            ftb.pitch = Int32((ftb.width + 3) & ~3)
+            ftb.rows = UInt32(size.height)
+            let surface = Int(ftb.pitch)*Int(ftb.rows)
+            let buffer = g_malloc(UInt(surface)).assumingMemoryBound(to:UInt8.self)
+            ftb.buffer = buffer
+            ftb.num_grays = 256
+            ftb.pixel_mode = UInt8(FT_PIXEL_MODE_GRAY.rawValue)
+            memset(ftb.buffer,0,surface)
+            let gs = glyphs(text:text)
+            // add FT_Matrix if needed
+            pango_ft2_render_transformed(&ftb,nil,font,gs,0,0)
+            var pixels = [UInt32](repeating:0,count:surface)
+            for i in 0..<surface {
+                let l = UInt32(buffer[i])
+                var c:UInt32 = 255
+                c |= l << 24
+                c |= l << 16
+                c |= l << 8
+                pixels[i] = c
+            }
+            let b = Bitmap(parent:self.viewport!,size:Size(Double(ftb.width),Double(ftb.rows)),pixels:pixels)
+            pango_glyph_string_free(gs)
+            g_free(ftb.buffer)
+            g_free(&ftb)
+            return b
         }
         public func bitmap(text:String,align:Align=Align.left,width:Double=0,color:Color=Color.white,_ bitmap:@escaping (Bitmap)->())  {
             if text.length==0  {
@@ -571,7 +607,10 @@ import Foundation
             }
         }
         public func size(_ text:String) -> Size {
-            return Size.zero
+            let gs = glyphs(text:text)
+            let w = pango_glyph_string_get_width(gs)
+            pango_glyph_string_free(gs)
+            return Size(Double(w),height)
         }
         public func bounds(_ text:String, width:Double? = nil, lines:Int = 0) -> Rect {
             return Rect.zero
@@ -631,9 +670,9 @@ import Foundation
             }
         }
         public init(parent:NodeUI,name:String,size:Double) {
+            Font.initGlobals()
             self.size = size
             context = pango_font_map_create_context(Font.fmap)
-            Font.initGlobals()
             let fm = Font.fonts(matching:name)
             if fm.count > 0 {
                 self.name = fm[0]

@@ -327,14 +327,14 @@ open class Texture2D : NodeUI {
             }
         }
     #else
-        public init(parent:NodeUI,size:Size,scale:Size=Size(1,1),border:Size=Size.zero,format:Format = .rgba,file:String=#file,line:Int=#line) {
+        public init(parent:NodeUI,size:Size,scale:Size=Size(1,1),border:Size=Size.zero,format:Format = .rgba,pixels:[UInt32]? = nil,file:String=#file,line:Int=#line) {
             #if DEBUG
                 self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
             #endif
             self.pixels=size*scale
             super.init(parent: parent)
             self.scale=scale
-            texture = Tin.Texture(engine:viewport!.gpu.tin!,width:Int(self.pixels.width),height:Int(self.pixel.height))
+            texture = Tin.Texture(engine:viewport!.gpu.tin!,width:Int(self.pixels.width),height:Int(self.pixel.height),pixels:pixels)
         }
     #endif
     public init(parent:NodeUI,path:String,border:Size=Size.zero,file:String=#file,line:Int=#line) {
