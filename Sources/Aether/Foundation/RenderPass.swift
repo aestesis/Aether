@@ -521,73 +521,17 @@ import Foundation
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public class Buffers : NodeUI {
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        let lock=Lock()
-        var bl=[Int:Set<Buffer>]()
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        init(viewport:Viewport) {
-            super.init(parent:viewport)
-        }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        public func get(_ size:Int, persistent:Bool=false) -> Buffer {
-            let sz = persistent ? size : (size<16384 ? (size<512 ? ((size / 32) + 1) * 32 : ((size / 1024) + 1) * 1024) : (size / 32768 + 1) * 32768)
-            var b:Buffer?
-            lock.synced {
-                if self.bl[sz] != nil {
-                    if let b0=self.bl[sz]!.first {
-                        self.bl[sz]!.remove(b0)
-                        b=b0
-                        return
-                    }
-                }
-                b=Buffer(buffers:self,size:sz)
-                //Debug.info("new gpu buffer, size: \(size)")
-            }
-            return b!
-        }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        public func set(_ b:Buffer) {
-            lock.synced {
-                if self.bl[b.size] != nil {
-                    #if DEBUG
-                    if self.bl[b.size]!.contains(b) {
-                        Debug.error("buffer already in pool",#file,#line)
-                        return
-                    }
-                    #endif
-                    self.bl[b.size]!.insert(b)
-                } else {
-                    self.bl[b.size]=Set<Buffer>()
-                    self.bl[b.size]!.insert(b)
-                }
-            }
-        }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public class ProgramLibrary : NodeUI {
-        #if os(macOS) || os(iOS) || os(tvOS)
-            var lib:MTLLibrary?
-        #else
-        #endif
+        var lib:MTLLibrary?
         public init(parent:NodeUI,filename:String="default") {
             super.init(parent:parent)
-            #if os(macOS) || os(iOS) || os(tvOS)
-                let bundle = Bundle(for: type(of:parent))
-                let libpath = bundle.path(forResource: filename, ofType: "metallib")!
-                do {
-                    lib = try viewport!.gpu.device!.makeLibrary(filepath: libpath)
-                } catch {
-                    Debug.error("can't load metal library \(filename) in \(bundle.infoDictionary!["CFBundleName"]!)")
-                }
-            #else
-            #endif
+            let bundle = Bundle(for: type(of:parent))
+            let libpath = bundle.path(forResource: filename, ofType: "metallib")!
+            do {
+                lib = try viewport!.gpu.device!.makeLibrary(filepath: libpath)
+            } catch {
+                Debug.error("can't load metal library \(filename) in \(bundle.infoDictionary!["CFBundleName"]!)")
+            }
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -694,55 +638,19 @@ import Foundation
             return 0
         }
     }
-    public class Buffers : NodeUI {
-        let lock=Lock()
-        var bl=[Int:Set<Buffer>]()
-        init(viewport:Viewport) {
-            super.init(parent:viewport)
-        }
-        public func get(_ size:Int, persistent:Bool=false) -> Buffer {
-            let sz = persistent ? size : (size<16384 ? (size<512 ? ((size / 32) + 1) * 32 : ((size / 1024) + 1) * 1024) : (size / 32768 + 1) * 32768)
-            var b:Buffer?
-            lock.synced {
-                if self.bl[sz] != nil {
-                    if let b0=self.bl[sz]!.first {
-                        self.bl[sz]!.remove(b0)
-                        b=b0
-                        return
-                    }
-                }
-                b=Buffer(buffers:self,size:sz)
-            }
-            return b!
-        }
-        public func set(_ b:Buffer) {
-            lock.synced {
-                if self.bl[b.size] != nil {
-                    #if DEBUG
-                        if self.bl[b.size]!.contains(b) {
-                            Debug.error("buffer already in pool",#file,#line)
-                            return
-                        }
-                    #endif
-                    self.bl[b.size]!.insert(b)
-                } else {
-                    self.bl[b.size]=Set<Buffer>()
-                    self.bl[b.size]!.insert(b)
-                }
-            }
-        }
-    }
-    public enum VertexFormat {
-        case float
-        case float2
-        case float3
-        case float4
-    }
+    public typealias VertexFormat = Tin.Program.VertexFormat
     public class Program : NodeUI {
+        let program:Tin.Program? 
         public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
+            let codeV = ""
+            let codeF = ""
+            self.program = Tin.Program(engine:viewport.gpu.engine!,vertex:codeV,fragment:codeF,format:fmt)
             super.init(parent:viewport)
         }
         public init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
+            let codeV = ""
+            let codeF = ""
+            self.program = Tin.Program(engine:library.viewport!.gpu.engine!,vertex:codeV,fragment:codeF,format:fmt)
             super.init(parent:library)
         }
         public static func populateDefaultBlendModes(store:NodeUI,key:String,library:ProgramLibrary,vertex:String,fragment:String,fmt:[VertexFormat]) {
@@ -771,7 +679,54 @@ import Foundation
     }
     public class ProgramLibrary : NodeUI {
         public init(parent:NodeUI,filename:String="default") {
+            // TODO:
             super.init(parent:parent)
         }
     }
 #endif
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+public class Buffers : NodeUI {
+    let lock=Lock()
+    var bl=[Int:Set<Buffer>]()
+    init(viewport:Viewport) {
+        super.init(parent:viewport)
+    }
+    public func get(_ size:Int, persistent:Bool=false) -> Buffer {
+        let sz = persistent ? size : (size<16384 ? (size<512 ? ((size / 32) + 1) * 32 : ((size / 1024) + 1) * 1024) : (size / 32768 + 1) * 32768)
+        var b:Buffer?
+        lock.synced {
+            if self.bl[sz] != nil {
+                if let b0=self.bl[sz]!.first {
+                    self.bl[sz]!.remove(b0)
+                    b=b0
+                    return
+                }
+            }
+            b=Buffer(buffers:self,size:sz)
+            //Debug.info("new gpu buffer, size: \(size)")
+        }
+        return b!
+    }
+    public func set(_ b:Buffer) {
+        lock.synced {
+            if self.bl[b.size] != nil {
+                #if DEBUG
+                if self.bl[b.size]!.contains(b) {
+                    Debug.error("buffer already in pool",#file,#line)
+                    return
+                }
+                #endif
+                self.bl[b.size]!.insert(b)
+            } else {
+                self.bl[b.size]=Set<Buffer>()
+                self.bl[b.size]!.insert(b)
+            }
+        }
+    }
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////

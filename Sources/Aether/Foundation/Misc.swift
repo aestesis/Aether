@@ -234,44 +234,44 @@ public extension Array where Element : Equatable {
     }
 }
 public extension String {
-    subscript (i: Int) -> Character {
+    public subscript (i: Int) -> Character {
         return self[self.characters.index(self.startIndex, offsetBy: i)]
     }
-    subscript (i: Int) -> String {
+    public subscript (i: Int) -> String {
         return String(self[i] as Character)
     }
-    subscript (r: Range<Int>) -> String {
+    public subscript (r: Range<Int>) -> String {
         let start = characters.index(startIndex, offsetBy: r.lowerBound)
         let end = characters.index(start, offsetBy: r.count)
         return String(self[start..<end])
     }
-    subscript (r: ClosedRange <Int>) -> String {
+    public subscript (r: ClosedRange <Int>) -> String {
         let start = characters.index(startIndex, offsetBy: r.lowerBound)
         let end = characters.index(start, offsetBy: r.count-1)
         return String(self[start...end])
     }
-    subscript (r: PartialRangeFrom<Int>) -> String {
+    public subscript (r: PartialRangeFrom<Int>) -> String {
         let start = characters.index(startIndex, offsetBy: r.lowerBound)
         let end = characters.index(startIndex, offsetBy: self.length-1)
         return String(self[start...end])
     }
-    subscript (r: PartialRangeThrough<Int>) -> String {
+    public subscript (r: PartialRangeThrough<Int>) -> String {
         let start = startIndex
         let end = characters.index(startIndex, offsetBy: min(r.upperBound,self.length-1))
         return String(self[start...end])
     }
-    subscript (r: PartialRangeUpTo<Int>) -> String {
+    public subscript (r: PartialRangeUpTo<Int>) -> String {
         let start = startIndex
         let end = characters.index(startIndex, offsetBy: min(r.upperBound,self.length))
         return String(self[start..<end])
     }
-    var length:Int {
+    public var length:Int {
         return self.characters.count;
     }
-    func contains(_ s:String) -> Bool {
+    public func contains(_ s:String) -> Bool {
         return self.range(of:s) != nil
     }
-    func matches(_ pattern:String) -> [CountableRange<Int>] {
+    public func matches(_ pattern:String) -> [CountableRange<Int>] {
         var ranges=[CountableRange<Int>]()
         do {
             let regex = try NSRegularExpression(pattern: pattern, options: [])
@@ -281,29 +281,29 @@ public extension String {
         }
         return ranges
     }
-    func split(_ pattern:String) -> [String] {
+    public func split(_ pattern:String) -> [String] {
         return self.components(separatedBy: pattern)
     }
-    func splitByEach(_ characters:String) -> [String] {
+    public func splitByEach(_ characters:String) -> [String] {
         let ch=CharacterSet(charactersIn: characters)
         return self.components(separatedBy: ch)
     }
-    func trim() -> String {
+    public func trim() -> String {
         return self.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
-    func indexOf(_ s: String) -> Int? {
+    public func indexOf(_ s: String) -> Int? {
         if let r: Range<Index> = self.range(of: s) {
             return self.characters.distance(from: self.startIndex, to: r.lowerBound)
         }
         return nil
     }
-    func lastIndexOf(_ s: String) -> Int? {
+    public func lastIndexOf(_ s: String) -> Int? {
         if let r: Range<Index> = self.range(of: s, options: .backwards) {
             return self.characters.distance(from: self.startIndex, to: r.lowerBound)
         }
         return nil
     }
-    var urlEncoded : String? {
+    public var urlEncoded : String? {
         return self.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed)
     }
 }

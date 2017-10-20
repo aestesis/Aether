@@ -51,7 +51,7 @@ public class Viewport : NodeUI {
             }
             var loader:MTKTextureLoader?
         #else
-            var tin:Tin?
+            var engine:Tin?
             // TODO:
         #endif
         var library:ProgramLibrary?
@@ -500,7 +500,7 @@ public class Viewport : NodeUI {
             Alib.Thread.current["ui.thread"]=true
         }
     #else 
-        init(systemView:SystemView,tin:Tin,size:Size,scale:Size=Size(1,1),pixsize:Size? = nil) {
+        init(systemView:SystemView,engine:Tin,size:Size,scale:Size=Size(1,1),pixsize:Size? = nil) {
             self.scale=scale
             self.systemView=systemView
             if let ps = pixsize {
@@ -510,7 +510,7 @@ public class Viewport : NodeUI {
             }
             super.init(parent:nil)
             Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
-            gpu.tin=tin
+            gpu.engine=engine
             _size=size
             gpu.library=ProgramLibrary(parent:self,filename:"default")
             gpu.buffers=Buffers(viewport:self)

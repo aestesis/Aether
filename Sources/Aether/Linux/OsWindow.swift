@@ -46,7 +46,7 @@ public class OsWindow : Window,SystemView {
     }
     public override func render() {
         if viewport == nil {
-            viewport = Viewport(systemView:self,tin:engine!,size:Size(Double(width),Double(height)))
+            viewport = Viewport(systemView:self,engine:engine!,size:Size(Double(width),Double(height)))
             self.onStartUI.dispatch(viewport!)
         }
         if let vp=viewport {

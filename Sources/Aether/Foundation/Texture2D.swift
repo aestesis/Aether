@@ -141,7 +141,7 @@ open class Texture2D : NodeUI {
         }
     #else
         internal func initialize(from rb:RawBitmap) {
-            texture = Tin.Texture(engine:viewport!.gpu.tin!,width:rb.size.width,height:rb.size.height,pixels:rb.pixels)
+            texture = Tin.Texture(engine:viewport!.gpu.engine!,width:rb.size.width,height:rb.size.height,pixels:rb.pixels)
         }
     #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -334,7 +334,7 @@ open class Texture2D : NodeUI {
             self.pixels=size*scale
             super.init(parent: parent)
             self.scale=scale
-            texture = Tin.Texture(engine:viewport!.gpu.tin!,width:Int(self.pixels.width),height:Int(self.pixel.height),pixels:pixels)
+            texture = Tin.Texture(engine:viewport!.gpu.engine!,width:Int(self.pixels.width),height:Int(self.pixel.height),pixels:pixels)
         }
     #endif
     public init(parent:NodeUI,path:String,border:Size=Size.zero,file:String=#file,line:Int=#line) {
