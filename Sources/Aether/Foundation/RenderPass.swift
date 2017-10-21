@@ -638,19 +638,19 @@ import Foundation
             return 0
         }
     }
-    public typealias VertexFormat = Tin.Program.VertexFormat
+    public typealias VertexFormat = Tin.Pipeline.VertexFormat
     public class Program : NodeUI {
-        let program:Tin.Program? 
+        let program:Tin.Pipeline? 
         public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
             let codeV = ""
             let codeF = ""
-            self.program = Tin.Program(engine:viewport.gpu.engine!,vertex:codeV,fragment:codeF,format:fmt)
+            self.program = Tin.Pipeline(engine:viewport.gpu.engine!,vertex:codeV,fragment:codeF,format:fmt)
             super.init(parent:viewport)
         }
         public init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
             let codeV = ""
             let codeF = ""
-            self.program = Tin.Program(engine:library.viewport!.gpu.engine!,vertex:codeV,fragment:codeF,format:fmt)
+            self.program = Tin.Pipeline(engine:library.viewport!.gpu.engine!,vertex:codeV,fragment:codeF,format:fmt)
             super.init(parent:library)
         }
         public static func populateDefaultBlendModes(store:NodeUI,key:String,library:ProgramLibrary,vertex:String,fragment:String,fmt:[VertexFormat]) {
