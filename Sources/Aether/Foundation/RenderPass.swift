@@ -510,6 +510,9 @@ import Foundation
             if let bs=parent as? Buffers {
                 bs.set(self)
             }
+            // super.detach()   // don't detach has been re-attached to Buffers
+        }
+        public func destroy() { // really detach
             super.detach()
         }
         public var ptr:UnsafeMutableRawPointer {
@@ -620,22 +623,25 @@ import Foundation
             }
     }
     public class Buffer : NodeUI {
-        var wob = 0
+        var buffer:Tin.Buffer?
         init(buffers:Buffers,size:Int) {
             super.init(parent:buffers)
+            self.buffer = Buffer(engine:viewport!,size:size)
         }
         override public func detach() {
             if let bs=parent as? Buffers {
                 bs.set(self)
             }
+            // super.detach()   // don't detach has been re-attached
+        }
+        public func destroy() { // really detach
             super.detach()
         }
         public var ptr:UnsafeMutableRawPointer {
-            Debug.notImplemented()
-            return UnsafeMutableRawPointer(&wob)    // TODO:
+            return UnsafeMutableRawPointer(buffer.memory)    // TODO:
         }
         public var size:Int {
-            return 0
+            return buffer.size
         }
     }
     public typealias VertexFormat = Tin.Pipeline.VertexFormat
@@ -693,6 +699,9 @@ public class Buffers : NodeUI {
     var bl=[Int:Set<Buffer>]()
     init(viewport:Viewport) {
         super.init(parent:viewport)
+    }
+    public override func detach() {
+        super.detach()
     }
     public func get(_ size:Int, persistent:Bool=false) -> Buffer {
         let sz = persistent ? size : (size<16384 ? (size<512 ? ((size / 32) + 1) * 32 : ((size / 1024) + 1) * 1024) : (size / 32768 + 1) * 32768)
