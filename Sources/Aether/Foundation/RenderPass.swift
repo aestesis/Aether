@@ -626,22 +626,20 @@ import Foundation
         var buffer:Tin.Buffer?
         init(buffers:Buffers,size:Int) {
             super.init(parent:buffers)
-            self.buffer = Buffer(engine:viewport!,size:size)
+            self.buffer = Tin.Buffer(engine:viewport!.gpu.engine!,size:size)
         }
-        override public func detach() {
+        public func recycle() {
             if let bs=parent as? Buffers {
                 bs.set(self)
             }
-            // super.detach()   // don't detach has been re-attached
         }
-        public func destroy() { // really detach
-            super.detach()
-        }
-        public var ptr:UnsafeMutableRawPointer {
-            return UnsafeMutableRawPointer(buffer.memory)    // TODO:
+        public func data(fn:(UnsafeMutableRawPointer)->()) {
+            buffer?.withMemoryMap { p in
+                fn(p)
+            }
         }
         public var size:Int {
-            return buffer.size
+            return buffer!.size
         }
     }
     public typealias VertexFormat = Tin.Pipeline.VertexFormat

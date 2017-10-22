@@ -1,11 +1,15 @@
-import CZip
+import CZlib
+
 
 public class Zip {
+    let file : File?
     public init?(path:String) {
-        strm.zalloc = Z_NULL
-        strm.zfree = Z_NULL
-        strm.opaque = Z_NULL
-        if deflateInit(&strm, level) != Z_OK {
-            return nil
-        }
+        file = File(path:path)
+    }
+}
+
+public class File {
+    public init?(path:String) {
+
+    }
 }

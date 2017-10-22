@@ -62,28 +62,30 @@ open class Graphics : NodeUI {
     public func fill(rect:Rect,blend:BlendMode=BlendMode.opaque,color:Color) {
         program("program.color",blend:blend)
         uniforms(matrix)
-        let vert=colorVertices(4)
-        let strip=rect.strip
-        for i in 0...3 {
-            vert[i]=ColorVertice(position:strip[i].infloat3,color:color.infloat4)
+        colorVertices(4) { vert in
+            let strip=rect.strip
+            for i in 0...3 {
+                vert[i]=ColorVertice(position:strip[i].infloat3,color:color.infloat4)
+            }
+            render.draw(trianglestrip:4)
         }
-        render.draw(trianglestrip:4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(rect:Rect,image:Bitmap,from:Rect?=nil,blend:BlendMode=BlendMode.opaque,color:Color=Color.white,rotation:Rotation=Rotation.none) {
         var wrap = false
         program("program.texture",blend:blend)
         uniforms(matrix)
-        let vert=textureVertices(4) 
-        let strip=rect.strip
-        var rs = Rect(x:0,y:0,w:1,h:1)
-        if let r=from {
-            rs = r / image.size
-            wrap = rs.left<0 || rs.top<0 || rs.right>1 || rs.bottom>1   // TODO: separate U and V wrap
-        }
-        var uv=rs.strip(rotation)
-        for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+        textureVertices(4) { vert in
+            let strip=rect.strip
+            var rs = Rect(x:0,y:0,w:1,h:1)
+            if let r=from {
+                rs = r / image.size
+                wrap = rs.left<0 || rs.top<0 || rs.right>1 || rs.bottom>1   // TODO: separate U and V wrap
+            }
+            var uv=rs.strip(rotation)
+            for i in 0...3 {
+                vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            }
         }
         sampler(wrap ? "sampler.wrap" : "sampler.clamp")
         render.use(texture:image)
@@ -98,16 +100,17 @@ open class Graphics : NodeUI {
             program("program.gradient",blend:blend)
         }
         uniforms(matrix)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        var rs = Rect(x:0,y:0,w:1,h:1)
-        if let r=from {
-            rs = r / image.size
-            wrap = rs.left<0 || rs.top<0 || rs.right>1 || rs.bottom>1   // TODO: separate U and V wrap
-        }
-        var uv=rs.strip(rotation)
-        for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+        textureVertices(4) { vert in
+            let strip=rect.strip
+            var rs = Rect(x:0,y:0,w:1,h:1)
+            if let r=from {
+                rs = r / image.size
+                wrap = rs.left<0 || rs.top<0 || rs.right>1 || rs.bottom>1   // TODO: separate U and V wrap
+            }
+            var uv=rs.strip(rotation)
+            for i in 0...3 {
+                vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            }
         }
         sampler(wrap ? "sampler.wrap" : "sampler.clamp")
         render.use(texture:image)
@@ -118,12 +121,13 @@ open class Graphics : NodeUI {
     public func draw(rect:Rect,image:Bitmap,mask:Bitmap,blend:BlendMode=BlendMode.alpha,color:Color=Color.white) {
         program("program.texture.mask",blend:blend)
         uniforms(matrix)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        var uv = rs.strip
-        for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+        textureVertices(4) { vert in
+            let strip=rect.strip
+            let rs = Rect(x:0,y:0,w:1,h:1)
+            var uv = rs.strip
+            for i in 0...3 {
+                vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            }
         }
         sampler("sampler.clamp")
         render.use(texture:image)
@@ -134,14 +138,15 @@ open class Graphics : NodeUI {
     public func draw(rect:Rect,image:Bitmap,mask:Bitmap,blend:BlendMode=BlendMode.alpha,color:Color=Color.white,rotation:Rotation=Rotation.none,maskRotation:Rotation=Rotation.none) {
         program("program.texture.bitmap.mask",blend:blend)
         uniforms(matrix)
-        let vert=textureMaskVertices(4)
-        let cl=color.infloat4
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv = rs.strip(rotation)
-        let uvm = rs.strip(maskRotation)
-        for i in 0...3 {
-            vert[i]=TextureMaskVertice(position:strip[i].infloat3,uv:uv[i].infloat2,uvmask:uvm[i].infloat2,color:cl)
+        textureMaskVertices(4) { vert in
+            let cl=color.infloat4
+            let strip=rect.strip
+            let rs = Rect(x:0,y:0,w:1,h:1)
+            let uv = rs.strip(rotation)
+            let uvm = rs.strip(maskRotation)
+            for i in 0...3 {
+                vert[i]=TextureMaskVertice(position:strip[i].infloat3,uv:uv[i].infloat2,uvmask:uvm[i].infloat2,color:cl)
+            }
         }
         sampler("sampler.clamp")
         render.use(texture:image)
@@ -151,20 +156,23 @@ open class Graphics : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func blendParam(_ p:Float32)   {
         let b=buffer(MemoryLayout<Float32>.size)
-        let ptr = b.ptr.assumingMemoryBound(to: Float32.self)
-        ptr[0] = p
+        b.data { pd in 
+            let ptr = pd.assumingMemoryBound(to: Float32.self)
+            ptr[0] = p
+        }
         render.use(fragmentBuffer:b,atIndex:0)
     }
     public func blend(rect:Rect,base:Bitmap,overlay:Bitmap,blend:BlendMode=BlendMode.opaque,opacity:Double=1.0) {
         program("program.blend",blend:blend)
         uniforms(matrix)
         blendParam(Float32(opacity))
-        let vert=blendVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
-        for i in 0...3 {
-            vert[i]=BlendVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
+        blendVertices(4) { vert in
+            let strip=rect.strip
+            let rs = Rect(x:0,y:0,w:1,h:1)
+            let uv=rs.strip
+            for i in 0...3 {
+                vert[i]=BlendVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
+            }
         }
         sampler("sampler.clamp")
         render.use(texture:base,atIndex:0)
@@ -174,11 +182,12 @@ open class Graphics : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(strip vs:[Vertice],image:Bitmap,sampler smp:String="sampler.clamp",blend:BlendMode=BlendMode.opaque) {
         program("program.texture",blend:blend)
-        uniforms(matrix)
-        let vert=textureVertices(vs.count*2) // TODO: WTF, needs to mul x2 ???
-        for i in 0..<vs.count {
-            let v=vs[i]
-            vert[i] = TextureVertice(position:v.position.infloat3, uv: v.uv.infloat2, color: v.color.infloat4)
+        uniforms(matrix)     
+        textureVertices(vs.count*2) { vert in   // TODO: WTF, needs to mul x2 ???
+            for i in 0..<vs.count {
+                let v=vs[i]
+                vert[i] = TextureVertice(position:v.position.infloat3, uv: v.uv.infloat2, color: v.color.infloat4)
+            }
         }
         sampler(smp)
         render.use(texture:image)
@@ -188,10 +197,11 @@ open class Graphics : NodeUI {
     public func draw(triangle vs:[Vertice],image:Bitmap,sampler smp:String="sampler.clamp",blend:BlendMode=BlendMode.opaque) {
         program("program.texture",blend:blend)
         uniforms(matrix)
-        let vert=textureVertices(vs.count*2) // TODO: WTF, needs to mul x2 ???
-        for i in 0..<vs.count {
-            let v=vs[i]
-            vert[i] = TextureVertice(position:v.position.infloat3,uv:v.uv.infloat2,color:v.color.infloat4)
+        textureVertices(vs.count*2) { vert in   // TODO: WTF, needs to mul x2 ???
+            for i in 0..<vs.count {
+                let v=vs[i]
+                vert[i] = TextureVertice(position:v.position.infloat3,uv:v.uv.infloat2,color:v.color.infloat4)
+            }
         }
         sampler(smp)
         render.use(texture:image)
@@ -201,24 +211,25 @@ open class Graphics : NodeUI {
     public func draw(sprites:[PointSprite],image:Bitmap,scale:Double=1,blend:BlendMode=BlendMode.opaque) {
         program("program.texture",blend:blend)
         uniforms(matrix)
-        let vert=textureVertices(6*sprites.count*2) // TODO: WTF, needs to mul x2 ???
-        var i = 0
-        let s=Rect(x:0,y:0,w:1,h:1)
-        for sp in sprites {
-            let cl = sp.color.infloat4
-            let d = sp.position.rect(image.size).scale(sp.scale*scale)
-            vert[i]=TextureVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
-            i += 1
+        textureVertices(6*sprites.count*2) { vert in // TODO: WTF, needs to mul x2 ???
+            var i = 0
+            let s=Rect(x:0,y:0,w:1,h:1)
+            for sp in sprites {
+                let cl = sp.color.infloat4
+                let d = sp.position.rect(image.size).scale(sp.scale*scale)
+                vert[i]=TextureVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
+                i += 1
+            }
         }
         sampler("sampler.clamp")
         render.use(texture:image)
@@ -247,28 +258,26 @@ open class Graphics : NodeUI {
         ]
         program("program.texture",blend:blend)
         uniforms(matrix)
-        #if os(tvOS) || os(iOS)
-            let vert=textureVertices(6*rl.count*2)    // ugly patch, buffer too short on iOS, WTF ???
-        #else
-            let vert=textureVertices(6*rl.count)
-        #endif
-        let cl=color.infloat4
-        var i=0
-        for r in rl {
-            let d=r.d
-            let s=r.s/source
-            vert[i]=TextureVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
-            i += 1
+        
+        textureVertices(6*rl.count*2) { vert in     // TODO: fix it! need x2,ugly patch, buffer too short on iOS, WTF ???
+            let cl=color.infloat4
+            var i=0
+            for r in rl {
+                let d=r.d
+                let s=r.s/source
+                vert[i]=TextureVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
+                i += 1
+            }
         }
         sampler("sampler.clamp")
         render.use(texture:image)
@@ -293,29 +302,26 @@ open class Graphics : NodeUI {
         ]
         program("program.gradient.mask",blend:blend)
         uniforms(matrix)
-        #if os(tvOS) || os(iOS)
-            let vert=textureMaskVertices(6*rl.count*2)    // ugly patch, buffer too short on iOS, WTF ???
-        #else
-            let vert=textureMaskVertices(6*rl.count)
-        #endif
-        let cl=color.infloat4
-        var i=0
-        for r in rl {
-            let d=r.d
-            let m = r.m/mask.size
-            let s = r.s/image.size
-            vert[i]=TextureMaskVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,uvmask:m.topLeft.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,uvmask:m.bottomRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
-            i += 1
+        textureMaskVertices(6*rl.count*2) { vert in
+            let cl=color.infloat4
+            var i=0
+            for r in rl {
+                let d=r.d
+                let m = r.m/mask.size
+                let s = r.s/image.size
+                vert[i]=TextureMaskVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,uvmask:m.topLeft.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,uvmask:m.bottomRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
+                i += 1
+            }
         }
         if s.left<0 || s.right>1 || s.top<0 || s.bottom>1 {
             sampler("sampler.wrap")
@@ -347,29 +353,26 @@ open class Graphics : NodeUI {
         ]
         program("program.texture.bitmap.mask",blend:blend)
         uniforms(matrix)
-        #if os(tvOS) || os(iOS)
-            let vert=textureMaskVertices(6*rl.count*2)    // ugly patch, buffer too short on iOS, WTF ???
-        #else
-            let vert=textureMaskVertices(6*rl.count)
-        #endif
-        let cl=color.infloat4
-        var i=0
-        for r in rl {
-            let d=r.d
-            let m = r.m/mask.size
-            let s = r.s/image.size
-            vert[i]=TextureMaskVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,uvmask:m.topLeft.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,uvmask:m.bottomRight.infloat2,color:cl)
-            i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
-            i += 1
+        textureMaskVertices(6*rl.count*2) { vert in // TODO: fix it! ugly patch, buffer too short on iOS, WTF ???
+            let cl=color.infloat4
+            var i=0
+            for r in rl {
+                let d=r.d
+                let m = r.m/mask.size
+                let s = r.s/image.size
+                vert[i]=TextureMaskVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,uvmask:m.topLeft.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,uvmask:m.bottomRight.infloat2,color:cl)
+                i += 1
+                vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
+                i += 1
+            }
         }
         sampler("sampler.clamp")
         render.use(texture:image)
@@ -397,12 +400,13 @@ open class Graphics : NodeUI {
         //self.fill(rect:rect,color:.grey)    // 4debug
         program("program.texture",blend:blend)
         uniforms(matrix)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
-        for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+        textureVertices(4) { vert in
+            let strip=rect.strip
+            let rs = Rect(x:0,y:0,w:1,h:1)
+            let uv=rs.strip
+            for i in 0...3 {
+                vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            }
         }
         sampler("sampler.clamp")
         render.use(texture:b)
@@ -424,12 +428,13 @@ open class Graphics : NodeUI {
         }
         program("program.texture",blend:blend)
         uniforms(matrix)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
-        for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+        textureVertices(4) { vert in
+            let strip=rect.strip
+            let rs = Rect(x:0,y:0,w:1,h:1)
+            let uv=rs.strip
+            for i in 0...3 {
+                vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            }
         }
         sampler("sampler.clamp")
         render.use(texture:b)
@@ -440,8 +445,10 @@ open class Graphics : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func blurParam(_ p:float2)   {
         let b=buffer(MemoryLayout<float2>.size)
-        let ptr=b.ptr.assumingMemoryBound(to: float2.self) //UnsafeMutablePointer<float2>(b.ptr)
-        ptr[0]=p
+        b.data { pd in
+            let ptr=pd.assumingMemoryBound(to:float2.self)
+            ptr[0]=p
+        }
         render.use(fragmentBuffer:b,atIndex:0)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -449,12 +456,13 @@ open class Graphics : NodeUI {
         program("program.blur.horizontal",blend:BlendMode.copy)
         uniforms(matrix)
         blurParam(float2(Float(sigma/source.size.width),Float(sigma/source.size.height)))
-        let vert=blurVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
-        for i in 0...3 {
-            vert[i]=BlurVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
+        blurVertices(4) { vert in
+            let strip=rect.strip
+            let rs = Rect(x:0,y:0,w:1,h:1)
+            let uv=rs.strip
+            for i in 0...3 {
+                vert[i]=BlurVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
+            }
         }
         sampler(smp)
         render.use(texture:source)
@@ -464,12 +472,13 @@ open class Graphics : NodeUI {
         program("program.blur.vertical",blend:BlendMode.copy)
         uniforms(matrix)
         blurParam(float2(Float(sigma/source.size.width),Float(sigma/source.size.height)))
-        let vert=blurVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
-        for i in 0...3 {
-            vert[i]=BlurVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
+        blurVertices(4) { vert in
+            let strip=rect.strip
+            let rs = Rect(x:0,y:0,w:1,h:1)
+            let uv=rs.strip
+            for i in 0...3 {
+                vert[i]=BlurVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
+            }
         }
         sampler(smp)
         render.use(texture:source)
@@ -497,15 +506,17 @@ open class Graphics : NodeUI {
         tess.endPolygon()
         for s in tess.shapes {
             if paint.renderer is Paint.RenderTexture {
-                let vert=textureVertices(s.vertices.count)
-                for i in 0..<s.vertices.count {
-                    let v=s.vertices[i]
-                    vert[i]=TextureVertice(position:v.position.infloat3,uv:v.uv.infloat2,color:Color.white.infloat4)
+                textureVertices(s.vertices.count) { vert in
+                    for i in 0..<s.vertices.count {
+                        let v=s.vertices[i]
+                        vert[i]=TextureVertice(position:v.position.infloat3,uv:v.uv.infloat2,color:Color.white.infloat4)
+                    }
                 }
             } else {
-                let vert=colorVertices(s.vertices.count)
-                for i in 0..<s.vertices.count {
-                    vert[i]=ColorVertice(position:s.vertices[i].position.infloat3,color:paint.color.infloat4)
+                colorVertices(s.vertices.count) { vert in
+                    for i in 0..<s.vertices.count {
+                        vert[i]=ColorVertice(position:s.vertices[i].position.infloat3,color:paint.color.infloat4)
+                    }
                 }
             }
             switch s.kind {
@@ -518,18 +529,20 @@ open class Graphics : NodeUI {
             case .triangle_FAN:
                 let nidx=(s.vertices.count-2)*3
                 let b=buffer(MemoryLayout<UInt32>.size*nidx)
-                let index=b.ptr.assumingMemoryBound(to: UInt32.self)    //UnsafeMutablePointer<UInt32>(b.ptr)
-                let first:UInt32=0
-                var last:UInt32=1
-                var d:Int=0
-                for i in 2..<s.vertices.count {
-                    index[d] = first
-                    d += 1
-                    index[d] = last
-                    d += 1
-                    index[d] = UInt32(i)
-                    d += 1
-                    last = UInt32(i)
+                b.data { ptr in 
+                    let index=ptr.assumingMemoryBound(to: UInt32.self)    //UnsafeMutablePointer<UInt32>(b.ptr)
+                    let first:UInt32=0
+                    var last:UInt32=1
+                    var d:Int=0
+                    for i in 2..<s.vertices.count {
+                        index[d] = first
+                        d += 1
+                        index[d] = last
+                        d += 1
+                        index[d] = UInt32(i)
+                        d += 1
+                        last = UInt32(i)
+                    }
                 }
                 render.draw(triangle:nidx,index:b)
                 break
@@ -970,52 +983,66 @@ open class Graphics : NodeUI {
     public func buffer(_ size:Int) -> Buffer {
         let b=viewport!.gpu.buffers!.get(size)
         render.onDone.once { ok in
-            b.detach()
+            b.recycle()
         }
         return b
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func colorVertices(_ n:Int) -> UnsafeMutablePointer<ColorVertice> {
+    func colorVertices(_ n:Int, fn:(UnsafeMutablePointer<ColorVertice>)->()) {
         let b=buffer(n * MemoryLayout<ColorVertice>.size)
         render.use(vertexBuffer:b,atIndex:0)
-        return b.ptr.assumingMemoryBound(to: ColorVertice.self)  //UnsafeMutablePointer<ColorVertice>(b.ptr)
+        b.data { ptr in
+            fn(ptr.assumingMemoryBound(to: ColorVertice.self))
+        }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func textureVertices(_ n:Int) -> UnsafeMutablePointer<TextureVertice> {
+    public func textureVertices(_ n:Int, fn: (UnsafeMutablePointer<TextureVertice>)->()) {
         let b=buffer(n * MemoryLayout<TextureVertice>.size)
         render.use(vertexBuffer:b,atIndex:0)
-        return b.ptr.assumingMemoryBound(to: TextureVertice.self) //UnsafeMutablePointer<TextureVertice>(b.ptr)
+        b.data { ptr in
+            fn(ptr.assumingMemoryBound(to: TextureVertice.self))
+        }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func textureMaskVertices(_ n:Int) -> UnsafeMutablePointer<TextureMaskVertice> {
+    public func textureMaskVertices(_ n:Int, fn:(UnsafeMutablePointer<TextureMaskVertice>)->()) {
         let b=buffer(n * MemoryLayout<TextureMaskVertice>.size)
         render.use(vertexBuffer:b,atIndex:0)
-        return b.ptr.assumingMemoryBound(to: TextureMaskVertice.self)
+        b.data { ptr in
+            fn(ptr.assumingMemoryBound(to: TextureMaskVertice.self))
+        }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func blurVertices(_ n:Int) -> UnsafeMutablePointer<BlurVertice> {
+    func blurVertices(_ n:Int,fn:(UnsafeMutablePointer<BlurVertice>)->()) {
         let b=buffer(n * MemoryLayout<BlurVertice>.size)
         render.use(vertexBuffer:b,atIndex:0)
-        return b.ptr.assumingMemoryBound(to: BlurVertice.self) //UnsafeMutablePointer<BlurVertice>(b.ptr)
+        b.data { ptr in
+            fn(ptr.assumingMemoryBound(to: BlurVertice.self))
+        }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func blendVertices(_ n:Int) -> UnsafeMutablePointer<BlendVertice> {
+    func blendVertices(_ n:Int,fn:(UnsafeMutablePointer<BlendVertice>)->()) {
         let b=buffer(n * MemoryLayout<BlendVertice>.size)
         render.use(vertexBuffer:b,atIndex:0)
-        return b.ptr.assumingMemoryBound(to: BlendVertice.self) //UnsafeMutablePointer<BlendVertice>(b.ptr)
+        b.data { ptr in
+            fn(ptr.assumingMemoryBound(to: BlendVertice.self))
+        }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func uniforms(_ matrix:Mat4)   {
         let b=buffer(MemoryLayout<Uniforms>.size)
-        let ptr=b.ptr.assumingMemoryBound(to: Uniforms.self) //UnsafeMutablePointer<Uniforms>(b.ptr)
-        ptr[0]=Uniforms(matrix:matrix.infloat4x4)
-        render.use(vertexBuffer:b,atIndex:1)
+        b.data { p in
+            let ptr=p.assumingMemoryBound(to: Uniforms.self) 
+            ptr[0]=Uniforms(matrix:matrix.infloat4x4)
+            render.use(vertexBuffer:b,atIndex:1)
+        }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func uniforms(view:Mat4,world:Mat4,eye:Vec3)   {
         let b=buffer(MemoryLayout<Uniforms3D>.size)
-        let ptr=b.ptr.assumingMemoryBound(to: Uniforms3D.self)
-        ptr[0]=Uniforms3D(view:view.infloat4x4,world:world.infloat4x4,eye:eye.infloat3)
+        b.data { p in
+            let ptr=p.assumingMemoryBound(to: Uniforms3D.self)
+            ptr[0]=Uniforms3D(view:view.infloat4x4,world:world.infloat4x4,eye:eye.infloat3)
+        }
         render.use(vertexBuffer:b,atIndex:1)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////

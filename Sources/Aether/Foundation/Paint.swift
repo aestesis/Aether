@@ -64,11 +64,12 @@ public struct ColorGradient {
         let g = Graphics(image:b)
         g.program("program.gradient",blend:blend)
         g.uniforms(g.matrix)
-        let vert=g.textureVertices(4)
-        let strip=b.bounds.strip
-        var uv = Rect(x:0,y:0,w:1,h:1).strip
-        for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+        g.textureVertices(4) { vert in
+            let strip=b.bounds.strip
+            var uv = Rect(x:0,y:0,w:1,h:1).strip
+            for i in 0...3 {
+                vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            }
         }
         g.sampler("sampler.clamp")
         g.render.use(texture:source)

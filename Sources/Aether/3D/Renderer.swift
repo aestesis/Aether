@@ -413,8 +413,10 @@ public class PointLight : Light {
             if needsUpdate {
                 needsUpdate=false
                 let gpu = GPU(color:color.infloat4,attenuationConstant:Float32(attenuation.constant),attenuationLinear:Float32(attenuation.linear),attenuationQuadratic:Float32(attenuation.quadratic),position:self.worldMatrix.translation.infloat3)
-                let ptr = b.ptr.assumingMemoryBound(to: GPU.self)
-                ptr[0] = gpu
+                b.data { p in
+                    let ptr = p.assumingMemoryBound(to: GPU.self)
+                    ptr[0] = gpu
+                }
             }
             g.render.use(fragmentBuffer:b,atIndex:index)
         }
@@ -461,8 +463,10 @@ public class DirectionalLight : Light {
             if needsUpdate {
                 needsUpdate=false
                 let gpu = GPU(color:color.infloat4,intensity:Float32(intensity),direction:direction.infloat3)
-                let ptr = b.ptr.assumingMemoryBound(to: GPU.self)
-                ptr[0] = gpu
+                b.data { p in
+                    let ptr = p.assumingMemoryBound(to: GPU.self)
+                    ptr[0] = gpu
+                }
             }
             g.render.use(fragmentBuffer:b,atIndex:index)
         }
@@ -604,8 +608,10 @@ open class Material : NodeGPU {
         if let material=material, needsUpdate {
             needsUpdate=false
             let gpu = GPU(ambient:ambient.infloat4,diffuse:diffuse.infloat4,specular:specular.infloat4,shininess:Float32(shininess))
-            let ptr = material.ptr.assumingMemoryBound(to: GPU.self)
-            ptr[0] = gpu
+            material.data { p in
+                let ptr = p.assumingMemoryBound(to: GPU.self)
+                ptr[0] = gpu
+            }
         }
     }
     public func lights(g:Graphics,startIndex index:Int) {
@@ -1114,10 +1120,12 @@ open class Mesh : NodeGPU {
                 bufferVertices = self.persitentBuffer(MemoryLayout<GPUvertice>.size*vertices.count)
             }
             if let bv=bufferVertices {
-                let pv = bv.ptr.assumingMemoryBound(to: GPUvertice.self)
-                for i in 0..<vertices.count {
-                    let v = vertices[i]
-                    pv[i] = GPUvertice(position:v.position.infloat3,color:v.color.infloat4,uv:v.uv.infloat2,normal:v.normal.infloat3)
+                bv.data { p in
+                    let pv = p.assumingMemoryBound(to: GPUvertice.self)
+                    for i in 0..<vertices.count {
+                        let v = vertices[i]
+                        pv[i] = GPUvertice(position:v.position.infloat3,color:v.color.infloat4,uv:v.uv.infloat2,normal:v.normal.infloat3)
+                    }
                 }
             }
             boundingBox = _boundingBox
@@ -1130,8 +1138,10 @@ open class Mesh : NodeGPU {
                         bufferFaces[m] = self.persitentBuffer(MemoryLayout<Float32>.size*f.count)
                     }
                     if let bf = bufferFaces[m] {
-                        let pv = bf.ptr.assumingMemoryBound(to: Float32.self)
-                        memcpy(pv,f,MemoryLayout<Float32>.size*f.count)
+                        bf.data { p in 
+                            let pv = p.assumingMemoryBound(to: Float32.self)
+                            memcpy(pv,f,MemoryLayout<Float32>.size*f.count)
+                        }
                     }
                 }
             }

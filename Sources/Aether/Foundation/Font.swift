@@ -696,7 +696,11 @@ import Foundation
                 metrics = pango_font_get_metrics(self.font,nil)
                 pango_font_description_free(fd)
             }
-            super.init(parent:font.parent as! NodeUI)
+            if let toto = font.parent as? NodeUI {
+                super.init(parent:toto)
+            } else {
+                super.init(parent:font)
+            }
         }
         public convenience init(parent:NodeUI,name:String,size:Int) {
             self.init(parent:parent,name:name,size:Double(size))
