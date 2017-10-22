@@ -1,10 +1,78 @@
 import CZlib
 import Foundation
 
-public class Zip {
-    let file : FileScanner?
+public class ZipBundle {
+    // https://en.wikipedia.org/wiki/Zip_(file_format)
+    let file : FileScanner
+    var _files = [String:Int]()
+    var offsetDirectory:Int = 0
+    var offsetData:Int = 0
+    public var files:[String] {
+        return _files.keys.map { $0 }
+    }
     public init?(path:String) {
-        file = FileScanner(path:path)
+        let file = FileScanner(path:path)
+        if file == nil {
+            return nil
+        }
+        self.file = file!
+        self.parse()
+    }
+    func parse() {
+        file.seek(offset:0)
+        let magic = file.readUInt32()
+        if magic == 0x04034B50 {  
+            let version = file.readUInt16()
+            let purpose = file.readUInt16()
+            let method = file.readUInt16()
+            let time = file.readUInt16()
+            let data = file.readUInt16()
+            let crc32 = file.readUInt32()
+            let csize = file.readUInt32()
+            let usize = file.readUInt32()
+            let namesize = file.readUInt16()
+            let xfieldsize = file.readUInt16()
+            let name = file.read(count:Int(namesize!))
+            let xfield = file.read(count:Int(xfieldsize!))
+            offsetData = file.current
+            file.seek(offset:Int(csize!),origin:.current)
+            offsetDirectory = file.current
+            parseDirectory()
+        }
+    }
+    func parseDirectory() {
+        while true {
+            let magic = file.readUInt32()
+            if magic == 0x02014b50 {        // file desc
+                let versionMade = file.readUInt16()
+                let versionNeed = file.readUInt16()
+                let purpose = file.readUInt16()
+                let method = file.readUInt16()
+                let time = file.readUInt16()
+                let date = file.readUInt16()
+                let crc32 = file.readUInt32()
+                let csize = file.readUInt32()
+                let usize = file.readUInt32()
+                let namesize = file.readUInt16()
+                let xfieldsize = file.readUInt16()
+                let commentsize = file.readUInt16()
+                let disk = file.readUInt16()
+                let attrint = file.readUInt16()
+                let attrext = file.readUInt32()
+                let offset = file.readUInt32()
+                let name = file.read(count:Int(namesize!))
+                let xfield = file.read(count:Int(xfieldsize!))
+                let comment = file.read(count:Int(commentsize!))
+                let pn = UnsafeRawPointer(name).assumingMemoryBound(to:UInt8.self)
+                let n = String(cString:pn)
+                self._files[n] = Int(offset!)
+            } else if magic == 0x06054b50 { // end
+
+            } else {
+                Debug.error("zip file broken")
+                break
+            }
+        }
     }
 }
 
@@ -33,7 +101,7 @@ public class FileScanner {
             file = nil
         }
     }
-    public func seek(offset:Int,origin:Origin) {
+    public func seek(offset:Int,origin:Origin=Origin.begin) {
         switch origin {
             case .begin:
                 fseek(file, offset, SEEK_SET)
