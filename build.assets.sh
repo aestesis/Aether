@@ -1,8 +1,8 @@
 cd Sources/Shaders
 ./compile.sh
 cd ../..
-rm -f Aether.assets.zip
+rm -f assets.aether.zip
 cd Assets
-zip -r ../Aether.assets.zip *
+zip -r ../assets.aether.zip *
 cd ..
 

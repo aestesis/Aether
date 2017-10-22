@@ -3,6 +3,7 @@ import Foundation
 
 public class ZipBundle {
     // https://en.wikipedia.org/wiki/Zip_(file_format)
+    let filename:String
     let file : FileScanner
     var _files = [String:Int]()
     var offsetDirectory:Int = 0
@@ -11,6 +12,7 @@ public class ZipBundle {
         return _files.keys.map { $0 }
     }
     public init?(path:String) {
+        filename=path
         let file = FileScanner(path:path)
         if file == nil {
             return nil
@@ -67,7 +69,17 @@ public class ZipBundle {
                 let n = String(cString:pn)
                 self._files[n] = Int(offset!)
             } else if magic == 0x06054b50 { // end
-
+                let disk = file.readUInt16()
+                let distcentral = file.readUInt16()
+                let ndirectory = file.readUInt16()
+                let total = file.readUInt16()
+                let size = file.readUInt32()
+                let offset = file.readUInt32()  // from .begin
+                let commentsize = file.readUInt16()
+                let comment = file.read(count:Int(commentsize!))
+                if Int(offset!) == offsetDirectory {
+                    Debug.warning("zip binding: \(filename) OK")
+                }
             } else {
                 Debug.error("zip file broken")
                 break
