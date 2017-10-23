@@ -36,6 +36,7 @@ public class Application {
         return UIApplication.shared.delegate as! OsAppDelegate
     }
     #endif
+    static var zipBundles = [ZipBundle]()
     public static let events = MultiEvent<String>()
     public static var launches : Int = 0
     public static var author:String = "aestesis"
@@ -54,7 +55,6 @@ public class Application {
     #else
         public static var name:String = "unknown"
     #endif
-    
     public static var version:String {
         #if os(macOS) || os(iOS) || os(tvOS)
             return Bundle.main.infoDictionary!["CFBundleShortVersionString"] as! String
@@ -70,48 +70,68 @@ public class Application {
         #endif
     }
     #if os(OSX) || os(iOS)
-    public subscript(key: String) -> String? {
-        get { return UserDefaults.standard.string(forKey:key) }
-        set(v) { UserDefaults.standard.setValue(v,forKey:key) }
-    }
-    public func synchronize() {
-        UserDefaults.standard.synchronize()
-    }
-    public func clear() {
-        UserDefaults.standard.removePersistentDomain(forName: Application.id)
-    }
-    public private(set) var loaded = true
-    init() {
-        Debug.warning("application initialized")
-        Device.initialize()
-    }
-    #else
-    var def = [String:String]()
-    public subscript(key: String) -> String? {
-        get { return def[key] }
-        set(v) { def[key] = v }
-    }
-    public func synchronize() {
-        Application.setJSON(Application.localPath(".defaults.json"), JSON(def))
-    }
-    public func clear() {
-        def.removeAll()
-    }
-    public private(set) var loaded = false
-    init() {
-        Debug.warning("application initialized")
-        Device.initialize()
-        Debug.warning("Application.db: loading")
-        srand48(Int(ß.time))
-        Application.getJSON(Application.localPath(".defaults.json")) { json in
-            for (k,v) in json.dictionaryValue {
-                self.def[k] = v.stringValue
-            }
-            self.loaded = true
-        Debug.warning("Application.db: loaded")
+        public subscript(key: String) -> String? {
+            get { return UserDefaults.standard.string(forKey:key) }
+            set(v) { UserDefaults.standard.setValue(v,forKey:key) }
         }
-    }
+        public func synchronize() {
+            UserDefaults.standard.synchronize()
+        }
+        public func clear() {
+            UserDefaults.standard.removePersistentDomain(forName: Application.id)
+        }
+        public private(set) var loaded = true
+        init() {
+            Debug.warning("application initialized")
+            Device.initialize()
+        }
+    #else
+        var def = [String:String]()
+        public subscript(key: String) -> String? {
+            get { return def[key] }
+            set(v) { def[key] = v }
+        }
+        public func synchronize() {
+            Application.setJSON(Application.localPath(".defaults.json"), JSON(def))
+        }
+        public func clear() {
+            def.removeAll()
+        }
+        public private(set) var loaded = false
+        init() {
+            Debug.warning("application initialized")
+            Device.initialize()
+            Debug.warning("Application.db: loading")
+            srand48(Int(ß.time))
+            Application.getJSON(Application.localPath(".defaults.json")) { json in
+                for (k,v) in json.dictionaryValue {
+                    self.def[k] = v.stringValue
+                }
+                self.loaded = true
+                Debug.warning("Application.db: loaded")
+            }
+        }
     #endif
+    public static func initialize(name:String?=nil,codeRoot:String?=nil,assets:[String]?=nil) {
+        if let codeRoot = codeRoot {
+            Debug.codeRoot = codeRoot
+        }
+        #if os(Linux)
+            if let name = name {
+                Application.name = name
+            }
+            if let assets = assets {
+                for a in assets {
+                    if let f = Misc.find(file:a) {
+                        if let zb = ZipBundle(path:f) {
+                            zipBundles.append(zb)
+                        }
+                    }                    
+                }                
+            }
+            Application.db["initialized"] = "ok"
+        #endif
+    }
     public func contains(key: String) -> Bool {
         if let _ = self[key] {
             return true
@@ -177,10 +197,27 @@ public class Application {
         if path[0]=="/" {
             return path
         }
-        return "\(Bundle.main.resourcePath!)/\(path)"
+        #if os(macOS) || os(iOS) || os(tvOS)
+            return "\(Bundle.main.resourcePath!)/\(path)"
+        #else 
+            return path
+        #endif
     }
     public static func fileExists(_ path:String) -> Bool {
         return FileManager.default.fileExists(atPath: path)
+    }
+    public static func readFile(_ path:String) -> Stream? {
+        let p=Application.resourcePath(path)
+        if FileManager.default.fileExists(atPath: p) {
+            return FileReader(filename:p)
+        } else {
+            for zb in Application.zipBundles {
+                if zb.contains(path) {
+                    return zb.open(filename:path)
+                }
+            }
+        }
+        return nil
     }
     public static func getText(_ path:String,_ fn:@escaping (String?)->()) {
         let p=Application.resourcePath(path)

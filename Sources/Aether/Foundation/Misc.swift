@@ -33,6 +33,21 @@ public class ß : Misc {
 public class Misc {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public static func find(file:String) -> String? {
+        let fm = FileManager.default
+        var path:String? = fm.currentDirectoryPath 
+        while path != nil {
+            do {
+                let files = try fm.contentsOfDirectory(atPath: path!)
+                if files.contains(file) {
+                    return "\(path!)/\(file)"
+                }
+            } catch _ {
+            }
+            path = path?.parentPath 
+        }
+        return nil
+    }
     public static var alphaID:String {
         let data:String="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         var id:String="";
