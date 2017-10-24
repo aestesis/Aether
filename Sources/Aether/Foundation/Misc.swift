@@ -33,6 +33,10 @@ public class ß : Misc {
 public class Misc {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public static func string (from a:[UInt8]) -> String {
+        let c = a.map { Character(UnicodeScalar($0)) }        
+        return String(Array(c))
+    }
     public static func find(file:String) -> String? {
         let fm = FileManager.default
         var path:String? = fm.currentDirectoryPath 

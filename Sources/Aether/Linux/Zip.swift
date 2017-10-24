@@ -4,6 +4,9 @@ import Foundation
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// @_silgen_name("inflateInit_") private func inflateInit(strm : UnsafeMutableRawPointer, version : UnsafePointer<Int8>?, stream_size : CInt) -> CInt
+
 public class ZipBundle {
     // https://en.wikipedia.org/wiki/Zip_(file_format)
     struct FD {
@@ -30,10 +33,6 @@ public class ZipBundle {
         self.parse(file:file!)
 
     }
-    func toString(_ a:[UInt8]) -> String {
-        let c = a.map { Character(UnicodeScalar($0)) }        
-        return String(Array(c))
-    }
     func parse(file:FileScanner) {
         while true {
             let offset = file.cursor
@@ -53,13 +52,15 @@ public class ZipBundle {
                     let xfieldsize = file.readUInt16()
                     let name = file.read(count:Int(namesize!))
                     let xfield = file.read(count:Int(xfieldsize!))
-                    let n = toString(name)
+                    let n = Misc.string(from:name)
                     if csize! > 0 { // skip folders
                         self.fds[n] = FD(offset:file.cursor,sizeC:csize!,sizeU:usize!,method:method!)
                     }
-                    Debug.warning("file: \(toString(name))  offset:\(file.cursor)")
+                    //Debug.warning("file: \(n)  offset:\(file.cursor)")
                     file.seek(offset:Int(csize!),origin:.current)
                 } else if magic == 0x02014b50 {        // file desc (directory)
+                    break
+                    /*
                     let versionMade = file.readUInt16()
                     let versionNeed = file.readUInt16()
                     let purpose = file.readUInt16()
@@ -79,14 +80,9 @@ public class ZipBundle {
                     let name = file.read(count:Int(namesize!))
                     let xfield = file.read(count:Int(xfieldsize!))
                     let comment = file.read(count:Int(commentsize!))
-                    /*
-                    let sname = toString(name)
-                    if var fd = fds[sname] {
-                        fd.offset = Int(offset!)
-                        fds[sname] = fd
-                    }
+                    let sname = "" //toString(name)
+                    //Debug.warning("dir : \(sname)  offset: \(offset) ")
                     */
-                    Debug.warning("dir : \(toString(name))  offset: \(offset) ")
                     
                 } else if magic == 0x06054b50 {        // end
                     /*
@@ -143,11 +139,10 @@ class ZipFile : Stream {
         if let fd = bundle.fds[filename] {
             self.fd = fd
             self.end = fd.offset + Int(fd.sizeC)
-            Debug.warning("zip method: \(fd.method)")
             if let f = FileScanner(path:bundle.path) {
                 self.f = f
                 f.seek(offset:fd.offset)
-                _ = self.wait(0.001) {
+                self.wait(0.001) {
                     self.onData.dispatch(())
                 }
             } else {
@@ -163,7 +158,15 @@ class ZipFile : Stream {
     }
     override func read(_ desired:Int) -> [UInt8]? {
         if let f = f {
-            return f.read(count:min(desired,available))
+            let r = f.read(count:min(desired,available))
+            wait(0.001).then { _ in
+                if self.available>0 {
+                    self.onData.dispatch(())
+                } else {
+                    self.close()
+                }
+            }
+            return r
         }
         return nil
     }
@@ -191,43 +194,45 @@ public class UnzipStream : Stream {
     }
     public override func write(_ data:[UInt8],offset:Int,count:Int) -> Int {
         // https://tools.ietf.org/html/rfc1950
+        // https://stackoverflow.com/questions/18700656/zlib-inflate-failing-with-3-z-data-error
         var out = [UInt8](repeating:0,count:8192)
         strm.avail_in = UInt32(data.count)
         strm.next_in = UnsafeMutablePointer(mutating:data)
-        let cmf = data[0]
-        let flg = data[1]
-        if (Int(cmf)*256 + Int(flg) % 31) == 0 {
-            Debug.warning("zip ok")
-        } else {
-            Debug.warning("zip ko")
-        }
         var running = true
+        var readed = 0
         while running {
             strm.avail_out = UInt32(out.count)
             strm.next_out = UnsafeMutablePointer(mutating:out)
             let ret = inflate(&strm,Z_NO_FLUSH)
-            switch inflate(&strm,Z_NO_FLUSH) {
+            switch ret {
+                case Z_NEED_DICT:
+                Debug.error("zip: need dict")
                 case Z_STREAM_ERROR:
-                Debug.error("unzip stream error: stream error")
+                Debug.error("zip: stream error")
                 inflateEnd(&strm)
                 running = false
                 case Z_DATA_ERROR:
-                Debug.error("unzip stream error: data error")
+                Debug.error("zip: data error")
                 inflateEnd(&strm)
                 running = false
                 case Z_MEM_ERROR:
-                Debug.error("unzip stream error: mem error")
+                Debug.error("zip: mem error")
                 inflateEnd(&strm)
                 running = false
                 default:
                 let inflated = out.count - Int(strm.avail_out)
-                Debug.error("unzip inflated: \(inflated)")
+                //Debug.warning("zip: inflated \(inflated)")
                 if inflated>0 {
                     self.data.append(contentsOf:out[0..<inflated])
                 }
+                if ret == Z_STREAM_END {
+                    //Debug.warning("zip: end")
+                    inflateEnd(&strm)
+                    running = false
+                }
             }
         }
-        return 0
+        return data.count - Int(strm.avail_in)
     }
     public init() {
         super.init()
@@ -236,7 +241,17 @@ public class UnzipStream : Stream {
         strm.opaque = nil
         strm.avail_in = 0
         strm.next_in = nil
-        //inflateInit(&strm)
+        var c_version = zlibVersion()
+        let version = String(cString:c_version!)
+        //inflateInit2(&strm, -MAX_WBITS)
+        switch inflateInit2_(&strm, -MAX_WBITS, c_version, CInt(MemoryLayout<z_stream>.size)) {
+        //switch inflateInit_(&strm, c_version, CInt(MemoryLayout<z_stream>.size)) {
+            case Z_OK:
+            //NSLog("zip: init OK")
+            break
+            default:
+            Debug.error("zip: init error")
+        }
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

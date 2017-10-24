@@ -3,6 +3,7 @@ cd Sources/Shaders
 cd ../..
 rm -f assets.aether.zip
 cd Assets
-zip -r -0 ../assets.aether.zip *
+# compression not supported yet
+zip -r -9 ../assets.aether.zip *
 cd ..
 

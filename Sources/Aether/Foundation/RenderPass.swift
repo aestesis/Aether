@@ -644,18 +644,30 @@ import Foundation
     }
     public typealias VertexFormat = Tin.Pipeline.VertexFormat
     public class Program : NodeUI {
-        let program:Tin.Pipeline? 
+        var program:Tin.Pipeline? 
         public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
-            let codeV = ""
-            let codeF = ""
-            self.program = Tin.Pipeline(engine:viewport.gpu.engine!,vertex:codeV,fragment:codeF,format:fmt)
             super.init(parent:viewport)
+            let v = Application.getData("Shaders/\(vertex).vert.spv")
+            let f = Application.getData("Shaders/\(fragment).frag.spv")
+            if v == nil {
+                Debug.error("error: vertext shader not found: \(vertex)")
+            }
+            if f == nil {
+                Debug.error("error: fragment shader not found: \(fragment)")
+            }
+            self.program = Tin.Pipeline(engine:viewport.gpu.engine!,vertex:v!,fragment:f!,format:fmt)
         }
         public init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
-            let codeV = ""
-            let codeF = ""
-            self.program = Tin.Pipeline(engine:library.viewport!.gpu.engine!,vertex:codeV,fragment:codeF,format:fmt)
             super.init(parent:library)
+            let v = Application.getData("Shaders/\(vertex).vert.spv")
+            let f = Application.getData("Shaders/\(fragment).frag.spv")
+            if v == nil {
+                Debug.error("error: vertext shader not found: \(vertex)")
+            }
+            if f == nil {
+                Debug.error("error: fragment shader not found: \(fragment)")
+            }
+            self.program = Tin.Pipeline(engine:viewport!.gpu.engine!,vertex:v!,fragment:f!,format:fmt)
         }
         public static func populateDefaultBlendModes(store:NodeUI,key:String,library:ProgramLibrary,vertex:String,fragment:String,fmt:[VertexFormat]) {
             for bm in BlendMode.defaultModes {
@@ -681,9 +693,8 @@ import Foundation
             }
         }
     }
-    public class ProgramLibrary : NodeUI {
+    public class ProgramLibrary : NodeUI {  // not used with vulkan
         public init(parent:NodeUI,filename:String="default") {
-            // TODO:
             super.init(parent:parent)
         }
     }

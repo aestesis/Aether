@@ -219,8 +219,14 @@ public class Application {
         }
         return nil
     }
+    public static func getData(_ path:String) -> [UInt8]? {
+        if let f = Application.readFile(path) {
+            return f.read(f.available)
+        } 
+        return nil
+    }
     public static func getText(_ path:String,_ fn:@escaping (String?)->()) {
-        if let f = self.readFile(path) {
+        if let f = Application.readFile(path) {
             let r=UTF8Reader()
             r.onClose.once {
                 if let s=r.readAll() {
@@ -238,7 +244,7 @@ public class Application {
         }
     }
     public static func readText(_ path:String,_ fn:@escaping (UTF8Reader?)->()) {
-        if let f = self.readFile(path) {
+        if let f = Application.readFile(path) {
             let r=UTF8Reader()
             f.pipe(to:r)
             fn(r)
@@ -247,7 +253,7 @@ public class Application {
         }
     }
     public static func getJSON(_ path:String,_ fn:@escaping (JSON)->()) {
-        if let f = self.readFile(path) {
+        if let f = Application.readFile(path) {
             let r=UTF8Reader()
             r.onClose.once {
                 if let s=r.readAll() {
