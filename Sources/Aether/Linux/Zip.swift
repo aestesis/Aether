@@ -1,6 +1,9 @@
-import CZlib
+import Zlib
 import Foundation
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class ZipBundle {
     // https://en.wikipedia.org/wiki/Zip_(file_format)
     struct FD {
@@ -33,6 +36,7 @@ public class ZipBundle {
     }
     func parse(file:FileScanner) {
         while true {
+            let offset = file.cursor
             if let magic = file.readUInt32() {
                 //let h = String(format:"%2X", magic)
                 //Debug.warning("magic: \(h)")
@@ -53,10 +57,9 @@ public class ZipBundle {
                     if csize! > 0 { // skip folders
                         self.fds[n] = FD(offset:file.cursor,sizeC:csize!,sizeU:usize!,method:method!)
                     }
-                    //Debug.warning("file: \(toString(name))  c:\(csize) u:\(usize)")
+                    Debug.warning("file: \(toString(name))  offset:\(file.cursor)")
                     file.seek(offset:Int(csize!),origin:.current)
                 } else if magic == 0x02014b50 {        // file desc (directory)
-                    /*
                     let versionMade = file.readUInt16()
                     let versionNeed = file.readUInt16()
                     let purpose = file.readUInt16()
@@ -76,9 +79,15 @@ public class ZipBundle {
                     let name = file.read(count:Int(namesize!))
                     let xfield = file.read(count:Int(xfieldsize!))
                     let comment = file.read(count:Int(commentsize!))
-                    Debug.warning("dir : \(toString(name))  c:\(csize) u:\(usize)")
+                    /*
+                    let sname = toString(name)
+                    if var fd = fds[sname] {
+                        fd.offset = Int(offset!)
+                        fds[sname] = fd
+                    }
                     */
-                    break
+                    Debug.warning("dir : \(toString(name))  offset: \(offset) ")
+                    
                 } else if magic == 0x06054b50 {        // end
                     /*
                     let disk = file.readUInt16()
@@ -113,11 +122,12 @@ public class ZipBundle {
         return nil
     }
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 class ZipFile : Stream {
     var fd : ZipBundle.FD?
     var f : FileScanner? 
-    var begin: Int = 0
     var end : Int = 0
     override var available:Int {
         if let f = f {
@@ -132,10 +142,12 @@ class ZipFile : Stream {
         super.init()
         if let fd = bundle.fds[filename] {
             self.fd = fd
+            self.end = fd.offset + Int(fd.sizeC)
+            Debug.warning("zip method: \(fd.method)")
             if let f = FileScanner(path:bundle.path) {
                 self.f = f
                 f.seek(offset:fd.offset)
-                self.wait(0.001) {
+                _ = self.wait(0.001) {
                     self.onData.dispatch(())
                 }
             } else {
@@ -156,11 +168,80 @@ class ZipFile : Stream {
         return nil
     }
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class UnzipStream : Stream {
-
+    var data = [UInt8]()
+    var strm = z_stream()
+    public override var available:Int {
+        return data.count
+    }
+    public override func read(_ desired:Int) -> [UInt8]? {
+        if available<desired {
+            self.onFreespace.dispatch(())
+        }
+        let m = min(desired,available)
+        if m > 0 {
+            let d = Array(data[0..<m])
+            data.removeSubrange(0..<m)
+            return d
+        }
+        return nil
+    }
+    public override func write(_ data:[UInt8],offset:Int,count:Int) -> Int {
+        // https://tools.ietf.org/html/rfc1950
+        var out = [UInt8](repeating:0,count:8192)
+        strm.avail_in = UInt32(data.count)
+        strm.next_in = UnsafeMutablePointer(mutating:data)
+        let cmf = data[0]
+        let flg = data[1]
+        if (Int(cmf)*256 + Int(flg) % 31) == 0 {
+            Debug.warning("zip ok")
+        } else {
+            Debug.warning("zip ko")
+        }
+        var running = true
+        while running {
+            strm.avail_out = UInt32(out.count)
+            strm.next_out = UnsafeMutablePointer(mutating:out)
+            let ret = inflate(&strm,Z_NO_FLUSH)
+            switch inflate(&strm,Z_NO_FLUSH) {
+                case Z_STREAM_ERROR:
+                Debug.error("unzip stream error: stream error")
+                inflateEnd(&strm)
+                running = false
+                case Z_DATA_ERROR:
+                Debug.error("unzip stream error: data error")
+                inflateEnd(&strm)
+                running = false
+                case Z_MEM_ERROR:
+                Debug.error("unzip stream error: mem error")
+                inflateEnd(&strm)
+                running = false
+                default:
+                let inflated = out.count - Int(strm.avail_out)
+                Debug.error("unzip inflated: \(inflated)")
+                if inflated>0 {
+                    self.data.append(contentsOf:out[0..<inflated])
+                }
+            }
+        }
+        return 0
+    }
+    public init() {
+        super.init()
+        strm.zalloc = nil
+        strm.zfree = nil
+        strm.opaque = nil
+        strm.avail_in = 0
+        strm.next_in = nil
+        //inflateInit(&strm)
+    }
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class FileScanner {
     public enum Origin {
         case begin
@@ -251,3 +332,6 @@ public class FileScanner {
         return [UInt16]()
     }
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////

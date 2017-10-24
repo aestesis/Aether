@@ -3,6 +3,6 @@ cd Sources/Shaders
 cd ../..
 rm -f assets.aether.zip
 cd Assets
-zip -r ../assets.aether.zip *
+zip -r -0 ../assets.aether.zip *
 cd ..
 

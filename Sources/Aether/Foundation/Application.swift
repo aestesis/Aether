@@ -220,9 +220,7 @@ public class Application {
         return nil
     }
     public static func getText(_ path:String,_ fn:@escaping (String?)->()) {
-        let p=Application.resourcePath(path)
-        if FileManager.default.fileExists(atPath: p) {
-            let f=FileReader(filename:p)
+        if let f = self.readFile(path) {
             let r=UTF8Reader()
             r.onClose.once {
                 if let s=r.readAll() {
@@ -240,9 +238,7 @@ public class Application {
         }
     }
     public static func readText(_ path:String,_ fn:@escaping (UTF8Reader?)->()) {
-        let p=Application.resourcePath(path)
-        if FileManager.default.fileExists(atPath: p) {
-            let f=FileReader(filename:p)
+        if let f = self.readFile(path) {
             let r=UTF8Reader()
             f.pipe(to:r)
             fn(r)
@@ -251,9 +247,7 @@ public class Application {
         }
     }
     public static func getJSON(_ path:String,_ fn:@escaping (JSON)->()) {
-        let p=Application.resourcePath(path)
-        if FileManager.default.fileExists(atPath: p) {
-            let f=FileReader(filename:p)
+        if let f = self.readFile(path) {
             let r=UTF8Reader()
             r.onClose.once {
                 if let s=r.readAll() {
@@ -265,7 +259,7 @@ public class Application {
             }
             f.pipe(to:r)
         } else {
-            fn(JSON.null)
+            fn(nil)
         }
     }
     public static func setJSON(_ path:String,_ json:JSON) {

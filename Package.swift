@@ -8,7 +8,7 @@ let package = Package(
         .library(name: "Aether",targets: ["Aether"])
     ],
     dependencies: [
-        .package(url: "https://github.com/IBM-Swift/CZlib.git", from:"0.1.2"),
+        .package(url: "https://github.com/aestesis/Zlib.git", from:"0.1.3"),
         .package(url: "https://github.com/aestesis/Cpng", from:"2.0.2"),
         .package(url: "https://github.com/aestesis/CPango.git", .branch("master")),
         .package(url: "https://github.com/aestesis/Cfreetype.git", .branch("master")),
@@ -18,7 +18,7 @@ let package = Package(
         .package(url: "https://github.com/aestesis/Uridium.git", .branch("master"))
     ],
     targets: [
-        .target(name: "Aether",dependencies: ["Uridium","SwiftyJSON","libtess","Cpng","CPango","Cairo"])
+        .target(name: "Aether",dependencies: ["Uridium","SwiftyJSON","libtess","Cpng","CPango","Cairo","Zlib"])
     ]
 )
 
