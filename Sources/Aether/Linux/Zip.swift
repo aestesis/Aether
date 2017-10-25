@@ -5,8 +5,6 @@ import Foundation
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// @_silgen_name("inflateInit_") private func inflateInit(strm : UnsafeMutableRawPointer, version : UnsafePointer<Int8>?, stream_size : CInt) -> CInt
-
 public class ZipBundle {
     // https://en.wikipedia.org/wiki/Zip_(file_format)
     struct FD {
@@ -142,7 +140,7 @@ class ZipFile : Stream {
             if let f = FileScanner(path:bundle.path) {
                 self.f = f
                 f.seek(offset:fd.offset)
-                self.wait(0.001) {
+                _ = self.wait(0.001) {
                     self.onData.dispatch(())
                 }
             } else {
@@ -193,13 +191,12 @@ public class UnzipStream : Stream {
         return nil
     }
     public override func write(_ data:[UInt8],offset:Int,count:Int) -> Int {
-        // https://tools.ietf.org/html/rfc1950
+        // https://www.zlib.net/manual.html
         // https://stackoverflow.com/questions/18700656/zlib-inflate-failing-with-3-z-data-error
         var out = [UInt8](repeating:0,count:8192)
         strm.avail_in = UInt32(data.count)
         strm.next_in = UnsafeMutablePointer(mutating:data)
         var running = true
-        var readed = 0
         while running {
             strm.avail_out = UInt32(out.count)
             strm.next_out = UnsafeMutablePointer(mutating:out)
@@ -241,11 +238,9 @@ public class UnzipStream : Stream {
         strm.opaque = nil
         strm.avail_in = 0
         strm.next_in = nil
-        var c_version = zlibVersion()
-        let version = String(cString:c_version!)
-        //inflateInit2(&strm, -MAX_WBITS)
+        let c_version = zlibVersion()
+        //let version = String(cString:c_version!)
         switch inflateInit2_(&strm, -MAX_WBITS, c_version, CInt(MemoryLayout<z_stream>.size)) {
-        //switch inflateInit_(&strm, c_version, CInt(MemoryLayout<z_stream>.size)) {
             case Z_OK:
             //NSLog("zip: init OK")
             break
