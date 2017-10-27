@@ -557,11 +557,14 @@ import Foundation
             case counterClockwise
         }
         public let onDone=Event<Result>()
+        var pipeline:Tin.Pipeline?
+        var renderPass:Tin.RenderPass
         func use(_ sampler:Sampler, atIndex index:Int=0) {
         }
         public func commit() {
         }
         public func use(program:Program) {
+            pipeline = program.createPipeline(renderpass:self)
         }
         public func use(state:DepthStencilState) {
         }
@@ -590,13 +593,13 @@ import Foundation
         public func set(front:Winding) {
         }
         init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
+            renderPass = Tin.RenderPass(to:texture.texture!)!
             super.init(parent:texture)
         }
-        /*
-        init(viewport:Viewport,clear:Color?=nil,depthClear:Double=1.0,descriptor:MTLRenderPassDescriptor,drawable:CAMetalDrawable,depth:MTLTexture?=nil) {
+        init(viewport:Viewport,clear:Color?=nil,depthClear:Double=1.0,image:Tin.Image) {
+            renderPass = Tin.RenderPass(to:image)!
             super.init(parent:viewport)
         }
-        */
     }
     class Sampler : NodeUI {
         enum Mode {
@@ -644,35 +647,35 @@ import Foundation
     }
     public typealias VertexFormat = Tin.Pipeline.VertexFormat
     public class Program : NodeUI {
-        var program:Tin.Pipeline? 
+        let vertexName : String
+        let fragmentName : String
+        let vertexCode : [UInt8]?
+        let fragmentCode : [UInt8]?
+        let vertexFormat : [VertexFormat]
         public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
+            self.vertexName = vertex
+            self.fragmentName = vertex
+            self.vertexCode = Application.getData("Shaders/\(vertex).vert.spv")
+            self.fragmentCode = Application.getData("Shaders/\(fragment).frag.spv")
+            self.vertexFormat = fmt
             super.init(parent:viewport)
-            let v = Application.getData("Shaders/\(vertex).vert.spv")
-            let f = Application.getData("Shaders/\(fragment).frag.spv")
-            if v == nil {
-                Debug.error("error: vertext shader not found: \(vertex)")
+            if self.vertexCode == nil {
+                Debug.error("vertext shader not found: \(vertex)")
             }
-            if f == nil {
-                Debug.error("error: fragment shader not found: \(fragment)")
+            if self.fragmentCode == nil {
+                Debug.error("fragment shader not found: \(fragment)")
             }
-            self.program = Tin.Pipeline(engine:viewport.gpu.engine!,vertex:v!,fragment:f!,format:fmt)
         }
-        public init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
-            super.init(parent:library)
-            let v = Application.getData("Shaders/\(vertex).vert.spv")
-            let f = Application.getData("Shaders/\(fragment).frag.spv")
-            if v == nil {
-                Debug.error("error: vertext shader not found: \(vertex)")
-            }
-            if f == nil {
-                Debug.error("error: fragment shader not found: \(fragment)")
-            }
-            self.program = Tin.Pipeline(engine:viewport!.gpu.engine!,vertex:v!,fragment:f!,format:fmt)
+        public convenience init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
+            self.init(viewport:library.viewport!,vertex:vertex,fragment:fragment,blend:blend,fmt:fmt)
         }
         public static func populateDefaultBlendModes(store:NodeUI,key:String,library:ProgramLibrary,vertex:String,fragment:String,fmt:[VertexFormat]) {
             for bm in BlendMode.defaultModes {
                 store[Program.fullKey(key,blend:bm)] = Program(library:library,vertex:vertex,fragment:fragment,blend:bm,fmt:fmt)
             }
+        }
+        func createPipeline(renderpass rp:RenderPass) -> Tin.Pipeline? {
+            return Tin.Pipeline(renderpass:rp.renderPass,vertex:vertexCode!,fragment:fragmentCode!,format:vertexFormat)
         }
         public static func fullKey(_ key:String,blend:BlendMode) -> String{
             switch blend {
