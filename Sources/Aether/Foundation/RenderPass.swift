@@ -556,25 +556,58 @@ import Foundation
             case clockwise
             case counterClockwise
         }
-        public let onDone=Event<Result>()
-        var pipeline:Tin.Pipeline?
-        var renderPass:Tin.RenderPass
-        func use(_ sampler:Sampler, atIndex index:Int=0) {
+        struct ProgramStates {
+            var program : Program?
+            var sampler = [Int:Sampler]()
+            var vertexBuffer = [Int:Buffer]()
+            var fragmentBuffer = [Int:Buffer]()
+            var vertexTexture = [Int:Texture2D]()
+            var fragmentTexture = [Int:Texture2D]()
+            var depth : DepthStencilState?
+            var clip = Rect.zero
+            var cull = CullMode.front
+            var winding = Winding.clockwise
         }
-        public func commit() {
+
+        public let onDone=Event<Result>()
+
+        var renderPass:Tin.RenderPass
+
+        var states = ProgramStates()
+
+        func use(_ sampler:Sampler, atIndex index:Int=0) {
+            states.sampler[index] = sampler
         }
         public func use(program:Program) {
-            pipeline = program.createPipeline(renderpass:self)
+            states.program = program
         }
         public func use(state:DepthStencilState) {
+            states.depth = state
         }
         public func use(vertexBuffer buffer:Buffer,atIndex index:Int) {
+            states.vertexBuffer[index] = buffer
         }
-        public func use(fragmentBuffer fragment:Buffer,atIndex index:Int) {
+        public func use(fragmentBuffer buffer:Buffer,atIndex index:Int) {
+            states.fragmentBuffer[index] = buffer
         }
         public func use(texture:Texture2D, atIndex index:Int=0) {
+            states.fragmentTexture[index] = texture
         }
         public func use(vertexTexture vt: Texture2D, atIndex index:Int=0) {
+            states.vertexTexture[index] = vt
+        }
+        public func clip(rect r:Rect) {
+            states.clip = r
+        }
+        public func set(cull:CullMode) {
+            states.cull = cull
+        }
+        public func set(front:Winding) {
+            states.winding = front
+        }
+        func createPipeline() -> Tin.Pipeline? {
+            //pipeline = program.createPipeline(renderpass:self)
+            return nil
         }
         public func draw(triangle n:Int) {
         }
@@ -586,11 +619,7 @@ import Foundation
         }
         public func draw(sprite n:Int) {
         }
-        public func clip(rect r:Rect) {
-        }
-        public func set(cull:CullMode) {
-        }
-        public func set(front:Winding) {
+        public func commit() {
         }
         init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
             renderPass = Tin.RenderPass(to:texture.texture!)!
@@ -618,12 +647,12 @@ import Foundation
             case lesser
             case all
         }
-            public init(viewport:Viewport,mode:Mode,write:Bool) {
-                super.init(parent:viewport)
-            }
-            public init(viewport:Viewport) {
-                super.init(parent:viewport)
-            }
+        public init(viewport:Viewport,mode:Mode,write:Bool) {
+            super.init(parent:viewport)
+        }
+        public init(viewport:Viewport) {
+            super.init(parent:viewport)
+        }
     }
     public class Buffer : NodeUI {
         var buffer:Tin.Buffer?
@@ -649,22 +678,24 @@ import Foundation
     public class Program : NodeUI {
         let vertexName : String
         let fragmentName : String
-        let vertexCode : [UInt8]?
-        let fragmentCode : [UInt8]?
+        var vertex : Tin.Shader?
+        var fragment : Tin.Shader? 
         let vertexFormat : [VertexFormat]
         public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
             self.vertexName = vertex
-            self.fragmentName = vertex
-            self.vertexCode = Application.getData("Shaders/\(vertex).vert.spv")
-            self.fragmentCode = Application.getData("Shaders/\(fragment).frag.spv")
+            self.fragmentName = fragment
+            if let vertexCode = Application.getData("Shaders/\(vertex).vert.spv") {
+                self.vertex = Tin.Shader(engine:viewport.gpu.engine!,code:vertexCode)
+            } else {
+                Debug.error("Shaders/\(vertex).vert.spv not found")
+            }
+            if let fragmentCode = Application.getData("Shaders/\(fragment).frag.spv") {
+                self.fragment = Tin.Shader(engine:viewport.gpu.engine!,code:fragmentCode)
+            } else {
+                Debug.error("Shaders/\(fragment).vert.spv not found")
+            }
             self.vertexFormat = fmt
             super.init(parent:viewport)
-            if self.vertexCode == nil {
-                Debug.error("vertext shader not found: \(vertex)")
-            }
-            if self.fragmentCode == nil {
-                Debug.error("fragment shader not found: \(fragment)")
-            }
         }
         public convenience init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
             self.init(viewport:library.viewport!,vertex:vertex,fragment:fragment,blend:blend,fmt:fmt)
@@ -675,7 +706,9 @@ import Foundation
             }
         }
         func createPipeline(renderpass rp:RenderPass) -> Tin.Pipeline? {
-            return Tin.Pipeline(renderpass:rp.renderPass,vertex:vertexCode!,fragment:fragmentCode!,format:vertexFormat)
+            let st = Tin.Pipeline.States()
+            // TODO: fill states
+            return Tin.Pipeline(renderpass:rp.renderPass,vertex:vertex!,fragment:fragment!,states:st)
         }
         public static func fullKey(_ key:String,blend:BlendMode) -> String{
             switch blend {

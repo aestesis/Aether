@@ -839,15 +839,15 @@ open class Graphics : NodeUI {
         super.init(parent:parent)
     }
     #if os(macOS) || os(iOS) || os(tvOS)
-    public init(viewport:Viewport,descriptor:MTLRenderPassDescriptor,drawable:CAMetalDrawable,depth:MTLTexture?=nil,clear:Color?=nil,depthClear:Double=1.0,clip:Rect?=nil) {
-        let m = Mat4.gpu(size:viewport.size)
-        self.matrix=m
-        self.output=viewport.size
-        self.clip = Graphics.transformClip(m,(clip ?? Rect(o:Point.zero,s:viewport.size)))
-        self.render=RenderPass(viewport:viewport,clear:clear,depthClear:depthClear,descriptor:descriptor,drawable:drawable,depth:depth)
-        renderOwner = true
-        super.init(parent:viewport)
-    }
+        public init(viewport:Viewport,descriptor:MTLRenderPassDescriptor,drawable:CAMetalDrawable,depth:MTLTexture?=nil,clear:Color?=nil,depthClear:Double=1.0,clip:Rect?=nil) {
+            let m = Mat4.gpu(size:viewport.size)
+            self.matrix=m
+            self.output=viewport.size
+            self.clip = Graphics.transformClip(m,(clip ?? Rect(o:Point.zero,s:viewport.size)))
+            self.render=RenderPass(viewport:viewport,clear:clear,depthClear:depthClear,descriptor:descriptor,drawable:drawable,depth:depth)
+            renderOwner = true
+            super.init(parent:viewport)
+        }
     #endif
     public init(image:Bitmap,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false,clip:Rect?=nil) {
         let m = Mat4.gpu(size:image.size)

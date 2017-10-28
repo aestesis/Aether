@@ -33,23 +33,22 @@ public class ZipBundle {
     }
     func parse(file:FileScanner) {
         while true {
-            let offset = file.cursor
             if let magic = file.readUInt32() {
                 //let h = String(format:"%2X", magic)
                 //Debug.warning("magic: \(h)")
                 if magic == 0x04034B50 {                // file
-                    let version = file.readUInt16()
-                    let purpose = file.readUInt16()
+                    let _/*version*/ = file.readUInt16()
+                    let _/*purpose*/ = file.readUInt16()
                     let method = file.readUInt16()
-                    let time = file.readUInt16()
-                    let date = file.readUInt16()
-                    let crc32 = file.readUInt32()
+                    let _/*time**/ = file.readUInt16()
+                    let _/*date*/ = file.readUInt16()
+                    let _/*crc32*/ = file.readUInt32()
                     let csize = file.readUInt32()
                     let usize = file.readUInt32()
                     let namesize = file.readUInt16()
                     let xfieldsize = file.readUInt16()
                     let name = file.read(count:Int(namesize!))
-                    let xfield = file.read(count:Int(xfieldsize!))
+                    let _/*xfield*/ = file.read(count:Int(xfieldsize!))
                     let n = Misc.string(from:name)
                     if csize! > 0 { // skip folders
                         self.fds[n] = FD(offset:file.cursor,sizeC:csize!,sizeU:usize!,method:method!)
