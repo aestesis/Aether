@@ -69,74 +69,12 @@ open class Texture2D : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     #if os(macOS) || os(iOS) || os(tvOS)
         internal func initialize(from cg:CGImage) {
-            let pixfmt = MTLPixelFormat.rgba8Unorm // (cg.colorSpace?.model == .rgb) ? MTLPixelFormat.rgba8Unorm : MTLPixelFormat.a8Unorm
-            self.pixels = Size(Double(cg.width),Double(cg.height))
-            let d=MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixfmt, width: cg.width, height: cg.height, mipmapped: false)
-            self.texture=viewport!.gpu.device?.makeTexture(descriptor:d)
-            let isize = cg.width * cg.height
-            if let data = cg.dataProvider?.data {
-                let len = CFDataGetLength(data)
-                if len>=isize*4 {
-                    let bytes = CFDataGetBytePtr(data)
-                    switch cg.alphaInfo {
-                    case .noneSkipLast,.last:
-                        self.set(raw:bytes!)
-                    case .premultipliedLast:
-                        var buf = [UInt8](repeating:0,count:len)
-                        var s = bytes!
-                        var d = 0
-                        for _ in 0..<isize {
-                            let r:Int = Int(s[0])
-                            let g:Int = Int(s[1])
-                            let b:Int = Int(s[2])
-                            let a:Int = Int(s[3])
-                            if a>0 {
-                                buf[d] = UInt8(min(r*255/a,255))
-                                d += 1
-                                buf[d] = UInt8(min(g*255/a,255))
-                                d += 1
-                                buf[d] = UInt8(min(b*255/a,255))
-                                d += 1
-                                buf[d] = UInt8(a)
-                                d += 1
-                            } else {
-                                buf[d] = UInt8(r)
-                                d += 1
-                                buf[d] = UInt8(g)
-                                d += 1
-                                buf[d] = UInt8(b)
-                                d += 1
-                                buf[d] = UInt8(a)
-                                d += 1
-                            }
-                            s = s.advanced(by: 4)
-                        }
-                        self.set(raw:UnsafeRawPointer(buf))
-                        break
-                    default:
-                        Debug.notImplemented(#file,#line)
-                    }
-                } else if len == isize {    // 8 bits
-                    let bytes = CFDataGetBytePtr(data)
-                    var buf = [UInt8](repeating:0,count:len*4)
-                    var s = bytes!
-                    var d = 0
-                    for _ in 0..<isize {
-                        let v:UInt8 = s[0]
-                        buf[d] = v
-                        d += 1
-                        buf[d] = v
-                        d += 1
-                        buf[d] = v
-                        d += 1
-                        buf[d] = 255
-                        d += 1
-                        s = s.advanced(by: 1)
-                    }
-                    self.set(raw:UnsafeRawPointer(buf))
-                } else {
-                    Debug.error("image source error: expected \(isize*4) or \(isize) and got \(len) bytes")
-                }
+            do {
+                try self.texture=viewport!.gpu.loader!.newTexture(cgImage:cg,options:nil)
+                pixels.width=Double(texture!.width)
+                pixels.height=Double(texture!.height)
+            } catch  {
+                Debug.error("can't create texture from CGImage",#file,#line)
             }
         }
     #else
@@ -304,13 +242,13 @@ open class Texture2D : NodeUI {
             #if DEBUG
                 self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
             #endif
-            let pixfmt = (format == .rgba) ? MTLPixelFormat.rgba8Unorm : MTLPixelFormat.a8Unorm
+            let pixfmt = (format == .rgba) ? MTLPixelFormat.bgra8Unorm : MTLPixelFormat.a8Unorm
             self.pixels=size*scale
             super.init(parent: parent)
             self.scale=scale
             let d=MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixfmt, width: Int(self.pixels.width), height: Int(self.pixels.height), mipmapped: false)
             //d.textureType = .Type2DMultisample // TODO: implement multisampled texture http://stackoverflow.com/questions/36227209/multi-sampling-jagged-edges-in-metalios
-            d.usage = .renderTarget
+            d.usage =  [.shaderRead, .renderTarget]
             self.texture=viewport!.gpu.device?.makeTexture(descriptor:d)
         }
         public init(parent:NodeUI,cg:CGImage,file:String=#file,line:Int=#line) {

@@ -386,9 +386,9 @@ open class NodeUI : Node {
                 fut.done()
             }
         } else {
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + Double(Int64(duration*Double(ß.clocksPerSeconds))) / Double(ß.clocksPerSeconds), execute: {
-                if self.attached {
-                    self.ui {
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + Double(Int64(duration*Double(ß.clocksPerSeconds))) / Double(ß.clocksPerSeconds), execute: { [weak self] in
+                if let this=self, this.attached {
+                    this.ui {
                         fut.done()
                     }
                 } else {
@@ -404,11 +404,9 @@ open class NodeUI : Node {
         return fut
     }
     public func ui(_ fn:@escaping ()->()) {
-        if let vp=viewport {
-            vp.pulse.once {
-                if self.attached {
-                    fn()
-                }
+        viewport?.pulse.once { [weak self] in
+            if let this=self, this.attached {
+                fn()
             }
         }
     }
@@ -541,7 +539,9 @@ public class Event<T> {
             self.actions.insert(a);
         }
         owner.onDetach.once {
-            self.actions.remove(a)
+            self.lock.synced {
+                self.actions.remove(a)
+            }
         }
     }
     public var count:Int {

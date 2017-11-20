@@ -37,7 +37,7 @@ public struct Mat4 : CustomStringConvertible,JsonConvertible {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public var infloat4x4:float4x4 {
-        return float4x4([r0.infloat4,r1.infloat4,r2.infloat4,r3.infloat4])  // TODO: fix, as it's rows -> columns
+        return float4x4([r0.infloat4,r1.infloat4,r2.infloat4,r3.infloat4])  // rows -> columns, cause gpu translation in last column
     }
     public var indouble4x4:double4x4 {
         return double4x4([r0.indouble4,r1.indouble4,r2.indouble4,r3.indouble4])

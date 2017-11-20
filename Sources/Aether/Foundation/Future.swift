@@ -192,11 +192,12 @@ public class Job : Future {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class Worker : NodeUI {
     public var paused:Bool=false
-    var running=[Node:Int]()
     var jobs=[Job]()
     let lock=Lock()
     var release:Bool=false
     var threads:Int=0
+    #if DEBUG
+    var running=[String:Int]()
     public func debugInfo() {
         for k in running.keys {
             if running[k]!>5 {
@@ -204,6 +205,7 @@ public class Worker : NodeUI {
             }
         }
     }
+    #endif
     public var count:Int {
         var c=0
         self.lock.synced {
@@ -270,6 +272,10 @@ public class Worker : NodeUI {
         }
         return j
     }
+    override public func detach() {
+        self.stop()
+        super.detach()
+    }
     public init(parent:NodeUI,threads:Int=1) {
         super.init(parent:parent)
         for _ in 1...threads {
@@ -280,13 +286,15 @@ public class Worker : NodeUI {
                         var j:Job?=nil
                         self.lock.synced {
                             j=self.jobs.dequeue()
+                            #if DEBUG
                             if let j=j {
-                                if let r=self.running[j.owner] {
-                                    self.running[j.owner] = r+1
+                                if let r=self.running[j.owner.className] {
+                                    self.running[j.owner.className] = r+1
                                 } else {
-                                    self.running[j.owner] = 1
+                                    self.running[j.owner.className] = 1
                                 }
                             }
+                            #endif
                         }
                         if let j=j {
                             let owner = j.owner
@@ -295,11 +303,20 @@ public class Worker : NodeUI {
                                     j.done(j.action!())
                                 }
                             }
+                            #if DEBUG
                             self.lock.synced {
-                                if let r=self.running[owner] {
-                                    self.running[owner] = r-1
+                                if let r=self.running[owner.className] {
+                                    if owner.className == "CacheNet" {
+                                        Debug.warning("removing CacheNet -> \(r-1)")
+                                    }
+                                    if r > 1 {
+                                        self.running[owner.className] = r-1
+                                    } else {
+                                        self.running.remove(at: self.running.index(forKey: owner.className)!)
+                                    }
                                 }
                             }
+                            #endif
                             j.detach()
                         } else {
                             Thread.sleep(0.001)

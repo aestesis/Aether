@@ -29,6 +29,7 @@ import SwiftyJSON
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 public struct Color : CustomStringConvertible,JsonConvertible {
+    // http://www.easyrgb.com/en/math.php
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public var r:Double
@@ -54,34 +55,86 @@ public struct Color : CustomStringConvertible,JsonConvertible {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var abgr: UInt32 {
+    public var rgba: UInt32 {
         let v0 = UInt32(ai)<<24
         let v1 = UInt32(bi)<<16
         let v2 = UInt32(gi)<<8
         let v3 = UInt32(ri)
         return v0 | v1 | v2 | v3
     }
-    public var argb: UInt32 {
+    public var bgra: UInt32 {
         let v0 = UInt32(ai)<<24
         let v1 = UInt32(ri)<<16
         let v2 = UInt32(gi)<<8
         let v3 = UInt32(bi)
         return v0 | v1 | v2 | v3
     }
-    public var rgba: UInt32 {
+    public var abgr: UInt32 {
         let v0 = UInt32(ri)<<24
         let v1 = UInt32(gi)<<16
         let v2 = UInt32(bi)<<8
         let v3 = UInt32(ai)
         return v0 | v1 | v2 | v3
     }
-    public var bgra: UInt32 {
+    public var argb: UInt32 {
         let v0 = UInt32(bi)<<24
         let v1 = UInt32(gi)<<16
         let v2 = UInt32(ri)<<8
         let v3 = UInt32(ai)
         return v0 | v1 | v2 | v3
     }
+    public var hsba : (h:Double,s:Double,b:Double,a:Double) {
+        let vmax = max(max(self.r, self.g), self.b)
+        let vmin = min(min(self.r, self.g), self.b)
+        var h = 0.0
+        let s = (vmax == 0) ? 0.0 : (vmax - vmin) / vmax
+        let b = vmax
+        if s != 0 {
+            let rc = (vmax - self.r) / (vmax-vmin)
+            let gc = (vmax - self.g) / (vmax-vmin)
+            let bc = (vmax - self.b) / (vmax-vmin)
+            if r == vmax {
+                h = bc - gc
+            } else if g == vmax {
+                h = 2.0 + rc - bc
+            } else {
+                h = 4.0 + gc - rc
+            }
+            h /= 6.0
+            if h<0 {
+                h += 1.0
+            }
+        }
+        return (h:h,s:s,b:b,a:self.a)
+    }
+    public var hsla : (h:Double,s:Double,l:Double,a:Double) {
+        let vmax = max(max(self.r, self.g), self.b)
+        let vmin = min(min(self.r, self.g), self.b)
+        let d = vmax - vmin
+        var h = 0.0
+        var s = 0.0
+        let l = (vmax+vmin)*0.5
+        if d != 0 {
+            if l<0.5 {
+                s = d / (vmax + vmin)
+            } else {
+                s = d / (2 - vmax - vmin)
+            }
+            if self.r == vmax {
+                h = (self.g-self.b) / d
+            } else if self.g == vmax {
+                h = 2 + (self.b - self.r) / d
+            } else {
+                h = 4 + (self.r - self.g) / d
+            }
+            h /= 6.0
+            if h<0 {
+                h += 1.0
+            }
+        }
+        return (h:h,s:s,l:l,a:self.a)
+    }
+
     public var description: String {
         return html
     }
@@ -131,17 +184,29 @@ public struct Color : CustomStringConvertible,JsonConvertible {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public init(bgra:UInt32) {
+        self.a = Double((Int(bgra) >> 24) & 255) / 255.0
+        self.r = Double((Int(bgra) >> 16) & 255) / 255.0
+        self.g = Double((Int(bgra) >> 8) & 255) / 255.0
+        self.b = Double(Int(bgra) & 255) / 255.0
+    }
     public init(abgr:UInt32) {
-        self.a = Double((Int(abgr) >> 24) & 255) / 255.0
-        self.b = Double((Int(abgr) >> 16) & 255) / 255.0
-        self.g = Double((Int(abgr) >> 8) & 255) / 255.0
-        self.r = Double(Int(abgr) & 255) / 255.0
+        self.r = Double((Int(abgr) >> 24) & 255) / 255.0
+        self.g = Double((Int(abgr) >> 16) & 255) / 255.0
+        self.b = Double((Int(abgr) >> 8) & 255) / 255.0
+        self.a = Double(Int(abgr) & 255) / 255.0
+    }
+    public init(rgba:UInt32) {
+        self.a = Double((Int(rgba) >> 24) & 255) / 255.0
+        self.b = Double((Int(rgba) >> 16) & 255) / 255.0
+        self.g = Double((Int(rgba) >> 8) & 255) / 255.0
+        self.r = Double(Int(rgba) & 255) / 255.0
     }
     public init(argb:UInt32) {
-        self.a = Double((Int(argb) >> 24) & 255) / 255.0
-        self.r = Double((Int(argb) >> 16) & 255) / 255.0
-        self.g = Double((Int(argb) >> 8) & 255) / 255.0
-        self.b = Double(Int(argb) & 255) / 255.0
+        self.b = Double((Int(argb) >> 24) & 255) / 255.0
+        self.g = Double((Int(argb) >> 16) & 255) / 255.0
+        self.r = Double((Int(argb) >> 8) & 255) / 255.0
+        self.a = Double(Int(argb) & 255) / 255.0
     }
     public init(a:Double=1,r:Double,g:Double,b:Double) {
         self.a=a
@@ -162,36 +227,107 @@ public struct Color : CustomStringConvertible,JsonConvertible {
         self.b=rgb.b
     }
     #if os(iOS) || os(tvOS)
-    public init(a:Double=1,h:Double,s:Double,b:Double) {
-        self.a=min(max(a,0),1)
-        let ui=UIColor(hue: CGFloat(h), saturation: CGFloat(s), brightness: CGFloat(b), alpha: CGFloat(a))
-        var cr=CGFloat()
-        var cg=CGFloat()
-        var cb=CGFloat()
-        var ca=CGFloat()
-        ui.getRed(&cr,green:&cg,blue:&cb,alpha:&ca)
-        self.r = Double(cr)
-        self.g = Double(cg)
-        self.b = Double(cb)
-    }
+        public init(a:Double=1,h:Double,s:Double,b:Double) {
+            self.a=min(max(a,0),1)
+            let ui=UIColor(hue: CGFloat(h), saturation: CGFloat(s), brightness: CGFloat(b), alpha: CGFloat(a))
+            var cr=CGFloat()
+            var cg=CGFloat()
+            var cb=CGFloat()
+            var ca=CGFloat()
+            ui.getRed(&cr,green:&cg,blue:&cb,alpha:&ca)
+            self.r = Double(cr)
+            self.g = Double(cg)
+            self.b = Double(cb)
+        }
     #elseif os(OSX)
-    public init(a:Double=1,h:Double,s:Double,b:Double) {
-        self.a=min(max(a,0),1)
-        let ns=NSColor(hue: CGFloat(h), saturation: CGFloat(s), brightness: CGFloat(b), alpha: CGFloat(a))
-        self.r=Double(ns.redComponent)
-        self.g=Double(ns.greenComponent)
-        self.b=Double(ns.blueComponent)
-    }
+        public init(a:Double=1,h:Double,s:Double,b:Double) {
+            self.a=min(max(a,0),1)
+            let ns=NSColor(hue: CGFloat(h), saturation: CGFloat(s), brightness: CGFloat(b), alpha: CGFloat(a))
+            self.r=Double(ns.redComponent)
+            self.g=Double(ns.greenComponent)
+            self.b=Double(ns.blueComponent)
+        }
     #else
-    public init(a:Double=1,h:Double,s:Double,b:Double) {
-        self.r = 0
-        self.g = 0
-        self.b = 0
-        self.a = 0
-        Debug.notImplemented()
-        // TODO:
-    }
+        public init(a:Double=1,h:Double,s:Double,b:Double) {
+            self.a=min(max(a,0),1)
+            if s == 0 {
+                self.r = b
+                self.g = b
+                self.b = b
+            } else {
+                let sectorPos = h * 360 / 60.0
+                let sectorNumber = Int(floor(sectorPos))
+                let fractionalSector = sectorPos - Double(sectorNumber)
+                let p = b * (1.0 - s)
+                let q = b * (1.0 - (s * fractionalSector));
+                let t = b * (1.0 - (s * (1 - fractionalSector)))
+                switch (sectorNumber)
+                {
+                    case 1:
+                    self.r = q
+                    self.g = b
+                    self.b = p
+                    case 2:
+                    self.r = p
+                    self.g = b
+                    self.b = t
+                    case 3:
+                    self.r = p
+                    self.g = q
+                    self.b = b
+                    case 4:
+                    self.r = t
+                    self.g = p
+                    self.b = b
+                    case 5:
+                    self.r = b
+                    self.g = p
+                    self.b = q
+                    default: // 0
+                    self.r = b
+                    self.g = t
+                    self.b = p
+                }
+            }
+        }
     #endif
+    public init(a:Double=1,h:Double,s:Double,l:Double) {
+        // https://stackoverflow.com/questions/4793729/rgb-to-hsl-and-back-calculation-problems
+        self.a=min(max(a,0),1)
+        if s == 0 {
+            self.r = l
+            self.g = l
+            self.b = l
+        } else {
+            var t2 = 0.0
+            if l<0.5 {
+                t2 = l * (1+s)
+            } else {
+                t2 = (l+s) - (l*s)
+            }
+            let t1 = 2*l - t2
+            
+            let r = h + (1/3)
+            let g = h
+            let b = h - (1/3)
+            
+            func calc(_ c0:Double) -> Double {
+                let c = ß.modulo(c0,1)
+                if 6*c<1 {
+                    return t1 + (t2-t1) * 6 * c
+                } else if 2*c < 1 {
+                    return t2
+                } else if 3*c < 2 {
+                    return t1 + (t2-t1) * (2/3-c) * 6
+                }
+                return t1
+            }
+
+            self.r = calc(r)
+            self.g = calc(g)
+            self.b = calc(b)
+        }
+    }
     public init(html:String) {
         var h:String=html;
         if(h[0]=="#") {

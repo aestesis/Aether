@@ -98,16 +98,6 @@ open class Bitmap : Texture2D {
             b.detach()
         }
     }
-    public static func simpleGradient(parent:NodeUI,_ c0:Color,_ c1:Color) -> Bitmap {
-        let b = Bitmap(parent:parent,size:Size(16,1))
-        var v = [UInt32](repeating:0,count:16)
-        for i in 0...15 {
-            let p = Double(i)/15.0
-            v[i] = c0.lerp(to:c1,coef:p).abgr
-        }
-        b.set(pixels:v)
-        return b
-    }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -23,6 +23,51 @@ import Foundation
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+public struct Interpolator {
+    var values=[Double:Double]()
+    public init() {
+    }
+    public init(_ values:[Double:Double]) {
+        self.values=values
+    }
+    public mutating func add(_ position:Double,_ v:Double) {
+        values[position]=v
+    }
+    public func value(_ position:Double) -> Double {
+        let keys = values.keys.sorted()
+        var i=0
+        while keys[i+1]<position {
+            i += 1
+        }
+        let p0 = keys[i]
+        let v0 = values[p0]!
+        let p1 = keys[i+1]
+        let v1 = values[p1]!
+        let c = (position-p0)/(p1-p0)
+        return v0 + (v1-v0) * c
+    }
+    public func values(from min:Double,to max:Double,count:Int) -> [Double] {
+        let keys = values.keys.sorted()
+        func val(_ position:Double) -> Double {
+            var i=0
+            while keys[i+1]<position {
+                i += 1
+            }
+            let p0 = keys[i]
+            let v0 = values[p0]!
+            let p1 = keys[i+1]
+            let v1 = values[p1]!
+            let c = (position-p0)/(p1-p0)
+            return v0 + (v1-v0) * c
+        }
+        var data = [Double](repeating:0,count:count)
+        for i in 0..<count {
+            let p = (Double(i)/Double(count-1))*(max-min)+min
+            data[i] = val(p)
+        }
+        return data
+    }
+}
 public struct ColorGradient {
     var colors=[Double:Color]()
     public private(set) var useAlpha=false
@@ -49,12 +94,32 @@ public struct ColorGradient {
         let c1 = colors[p1]!
         return c0.lerp(to:c1,coef:(position-p0)/(p1-p0))
     }
+    public func values(from min:Double,to max:Double,count:Int) -> [Color] {
+        let keys = colors.keys.sorted()
+        func val(_ position:Double) -> Color {
+            var i=0
+            while keys[i+1]<position {
+                i += 1
+            }
+            let p0 = keys[i]
+            let c0 = colors[p0]!
+            let p1 = keys[i+1]
+            let c1 = colors[p1]!
+            return c0.lerp(to:c1,coef:(position-p0)/(p1-p0))
+        }
+        var data = [Color](repeating:.black,count:count)
+        for i in 0..<count {
+            let p = (Double(i)/Double(count-1))*(max-min)+min
+            data[i] = val(p)
+        }
+        return data
+    }
     public func createBitmap(parent:NodeUI,width:Double) -> Bitmap {
+        let dc = self.values(from:0,to:1,count:Int(width))
         let b=Bitmap(parent:parent,size:Size(width,1))
         var v = [UInt32](repeating:0,count:Int(width))
         for x in 0..<v.count {
-            let c = self.value(Double(x)/Double(v.count-1))
-            v[x] = c.abgr
+            v[x] = dc[x].bgra
         }
         b.set(pixels:v)
         return b
@@ -153,18 +218,24 @@ public class Paint : NodeUI {
         super.init(parent:parent)
         self.radialGradient(colors:radial)
     }
+    public init(parent:NodeUI,mode:PaintMode=PaintMode.fill,blend:BlendMode=BlendMode.opaque,color:Color=Color.white,bitmap:Bitmap) {
+        self.mode=mode
+        self.blend=blend
+        super.init(parent:parent)
+        self.bitmap(image:bitmap,color:color)
+    }
     public init(parent:NodeUI,mode:PaintMode=PaintMode.fill,blend:BlendMode=BlendMode.opaque,pattern:Bitmap,scale:Size=Size(1,1),offset:Point=Point.zero) {
         self.mode=mode
         self.blend=blend
         super.init(parent:parent)
-        self.pattern(pattern,scale:scale,offset:offset)
+        self.pattern(image:pattern,scale:scale,offset:offset)
     }
-    public init(parent:NodeUI,mode:PaintMode=PaintMode.stroke,blend:BlendMode=BlendMode.opaque,line:Bitmap,strokeWidth:Double=1) {
+    public init(parent:NodeUI,mode:PaintMode=PaintMode.stroke,blend:BlendMode=BlendMode.opaque,color:Color=Color.white,line:Bitmap,strokeWidth:Double=1) {
         self.strokeWidth = strokeWidth
         self.mode=mode
         self.blend=blend
         super.init(parent:parent)
-        self.line(line)
+        self.line(image:line,color:color)
     }
     override public func detach() {
         if let renderer=renderer {
@@ -179,11 +250,19 @@ public class Paint : NodeUI {
         get {
             if let p=renderer as? RenderColor {
                 return p.color
+            } else if let p=renderer as? RenderTexture {
+                return p.color
             }
-            return Color.transparent
+            return Color.white
         }
         set(c) {
-            renderer=RenderColor(c)
+            if let r = renderer as? RenderColor {
+                r.color = c
+            } else if let r = renderer as? RenderTexture {
+                r.color = c
+            } else {
+                renderer=RenderColor(color:c)
+            }
             useAlpha=(c.a != 1)
         }
     }
@@ -195,11 +274,14 @@ public class Paint : NodeUI {
         renderer = RenderRadialGradient(center:center,focal:focal,radius:radius,colors:colors)
         useAlpha = colors.useAlpha
     }
-    public func pattern(_ image:Bitmap,scale:Size=Size(1,1),offset:Point=Point.zero) {
+    public func pattern(image:Bitmap,scale:Size=Size(1,1),offset:Point=Point.zero) {
         renderer=RenderPattern(image:image,scale:scale,offset:offset)
     }
-    public func line(_ image:Bitmap) {
-        renderer=RenderLine(image)
+    public func bitmap(image:Bitmap,color:Color=Color.white) {
+        renderer=RenderBitmap(image:image,color:color)
+    }
+    public func line(image:Bitmap,color:Color=Color.white) {
+        renderer=RenderLine(image:image,color:color)
     }
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -220,6 +302,9 @@ public class Paint : NodeUI {
         var uv:UV {
             return .none
         }
+        var sampler:String {
+            return "sampler.clamp"
+        }
         func offset(_ boudingBox:Rect) -> Point {
             return Point.zero
         }
@@ -233,27 +318,31 @@ public class Paint : NodeUI {
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class RenderColor : Renderer {
         var color:Color
-        init(_ color:Color) {
+        init(color:Color=Color.white) {
             self.color=color
         }
     }
     class RenderTexture : Renderer {
+        var color:Color
         override var uv:UV {
             return .boundingBox
         }
         func texture(parent:NodeUI) -> Texture2D? {
             return nil
         }
+        init(color:Color=Color.white) {
+            self.color=color
+        }
     }
     class RenderLinearGradient : RenderTexture {
         var colors:ColorGradient
         var p0:Point
         var p1:Point
-        init(p0:Point=Point.zero,p1:Point=Point(1,1),colors:ColorGradient)
-        {
+        init(p0:Point=Point.zero,p1:Point=Point(1,1),colors:ColorGradient) {
             self.colors=colors
             self.p0=p0
             self.p1=p1
+            super.init()
         }
         override func texture(parent:NodeUI) -> Texture2D? {
             return nil
@@ -265,12 +354,12 @@ public class Paint : NodeUI {
         var focal:Point
         var radius:Double
         var texture:Bitmap?
-        init(center:Point=Point(0.5,0.5),focal:Point=Point(0.5,0.5),radius:Double=0.5,colors:ColorGradient)
-        {
+        init(center:Point=Point(0.5,0.5),focal:Point=Point(0.5,0.5),radius:Double=0.5,colors:ColorGradient) {
             self.center=center
             self.focal=focal
             self.radius=radius
             self.colors=colors
+            super.init()
         }
         override func texture(parent:NodeUI) -> Texture2D? {
             if let t=texture {
@@ -287,7 +376,7 @@ public class Paint : NodeUI {
                 for x in 0..<Int(sz.w) {
                     let dx = (Double(x)-m.w)/m.w
                     let d = max(0.0,min(1.0,sqrt(dx*dx+dy*dy)*ir))
-                    pix[i] = colors.value(d).abgr
+                    pix[i] = colors.value(d).bgra
                     i += 1
                 }
             }
@@ -297,6 +386,9 @@ public class Paint : NodeUI {
         }
     }
     class RenderPattern : RenderTexture {
+        override var sampler:String {
+            return "sampler.wrap"
+        }
         var image:Bitmap
         var scale:Size
         var offset:Point
@@ -306,11 +398,24 @@ public class Paint : NodeUI {
         override func scale(_ boundingBox:Rect) -> Size {
             return boundingBox.size/(scale*image.size)
         }
-        init(image:Bitmap,scale:Size=Size(1,1),offset:Point=Point.zero)
-        {
+        init(image:Bitmap,scale:Size=Size(1,1),offset:Point=Point.zero) {
             self.image=image
             self.scale=scale
             self.offset=offset
+        }
+        override func detach() {
+            image.detach()
+            super.detach()
+        }
+        override func texture(parent:NodeUI) -> Texture2D? {
+            return image
+        }
+    }
+    class RenderBitmap : RenderTexture {
+        var image:Bitmap
+        init(image:Bitmap,color:Color=Color.white) {
+            self.image=image
+            super.init(color:color)
         }
         override func detach() {
             image.detach()
@@ -328,9 +433,9 @@ public class Paint : NodeUI {
             return Size(1,1)/image.size
         }
         var image:Bitmap
-        init(_ image:Bitmap)
-        {
+        init(image:Bitmap,color:Color=Color.white) {
             self.image=image
+            super.init(color:color)
         }
         override func texture(parent:NodeUI) -> Texture2D? {
             return image

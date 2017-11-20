@@ -775,6 +775,8 @@ open class View : NodeUI {
             Debug.error("error, View detached outside UI thread")
         }
         self.sui {
+            self._touch?.detach()
+            self._touch = nil
             self.onSubviewAttached.removeAll()
             self.onSubviewsChanged.removeAll()
             self.onEnterRendering.removeAll()

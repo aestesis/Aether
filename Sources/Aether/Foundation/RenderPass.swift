@@ -93,9 +93,13 @@ import Foundation
             command!.setFragmentSamplerState(sampler.state, index:index)
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        public func use(program:Program) {
-            command!.setRenderPipelineState(program.rps!)
+    public func use(program:Program) {
+        if useDepth {
+            command!.setRenderPipelineState(program.rpsdepth!)
+        } else {
+            command!.setRenderPipelineState(program.rpsnodepth!)
         }
+    }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         public func use(state:DepthStencilState) {
             command!.setDepthStencilState(state.state)
@@ -567,6 +571,17 @@ import Foundation
             var clip = Rect.zero
             var cull = CullMode.front
             var winding = Winding.clockwise
+            func createLayout() {
+                for s in sampler {
+
+                }
+                for v in vertexBuffer {
+
+                }
+                for f in fragmentBuffer {
+                    
+                }
+            }
         }
 
         public let onDone=Event<Result>()

@@ -82,15 +82,14 @@ public class Viewport : NodeUI {
     public private(set) var scale:Size=Size(1,1)
     public private(set) var release=false
     public private(set) var focusedView:View?
-    public private(set) var fps:Double = 0
+    public private(set) var fps:Double = 60
     public private(set) var nframes:Int=0
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     let debugThread = true
     public let systemView:SystemView
-    var keyframe:Double=ß.time
     var refreshers=[(owner:NodeUI,action:Action<Void>)]()
     var refreshLock=Lock()
-    var lastFrame:Double=ß.time
+    var lastFrame = 0.0
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     private var _needsLayout : Bool = false
@@ -178,13 +177,6 @@ public class Viewport : NodeUI {
                     }
                 }
             }
-            if (nframes & 255) == 0 {
-                let t=ß.time
-                let d=t-keyframe
-                keyframe=t
-                fps=256/d
-                Debug.warning("fps: \(fps.string(2))")
-            }
             let t=ß.time
             fps = 1 / (t-lastFrame)
             lastFrame = t
@@ -210,13 +202,6 @@ public class Viewport : NodeUI {
                 }
             }
             */
-            if (nframes & 255) == 0 {
-                let t=ß.time
-                let d=t-keyframe
-                keyframe=t
-                fps=256/d
-                Debug.warning("fps: \(fps.string(2))")
-            }
             let t=ß.time
             fps = 1 / (t-lastFrame)
             lastFrame = t
@@ -228,7 +213,7 @@ public class Viewport : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func render(_ g:Graphics,view:View,forced:Bool=false) {
-        if ((view.visible && view.color.a>0.01) || forced || view.drawMode == .surface) && view.size.width>0 && view.size.height>0  {
+        if ((view.visible && view.color.a>0.01) || forced || view.drawMode == .surface) && view.size.width>0 && view.size.height>0 {
             var clipped = true
             if let sv=view.superview {
                 clipped = sv.clipping
@@ -261,20 +246,23 @@ public class Viewport : NodeUI {
                                 subviews = Viewport.depthOrderedSubview(subviews)
                             }
                             for v in subviews {
-                                render(Graphics(parent:g,matrix:v.matrixRender,clip:v.bounds,clipping:v.clipping),view:v)
+                                if let gg = Graphics(parent:g,matrix:v.matrixRender,clip:v.bounds,clipping:v.clipping) {
+                                    render(gg,view:v)
+                                }
                             }
                             view.overlay(to: g)
                         }
                         let b = Bitmap(parent:view,size:view.size)
-                        //self.bg {
-                            let gn = Graphics(image:b,clear:view.background ?? .transparent)
+                        let gn = Graphics(image:b,clear:view.background ?? .transparent,depthClear:1)
                             view.draw(to:gn)
                             var subviews = view.subviews
                             if view.depthOrdering {
                                 subviews = Viewport.depthOrderedSubview(subviews)
                             }
                             for v in subviews {
-                                self.render(Graphics(parent:gn,matrix:v.matrixRender,clip:v.bounds),view:v)
+                                if let gg = Graphics(parent:gn,matrix:v.matrixRender,clip:v.bounds) {
+                                    self.render(gg,view:v)
+                                }
                             }
                             view.overlay(to: gn)
                             gn.done { ok in
@@ -331,14 +319,12 @@ public class Viewport : NodeUI {
                                     }
                                 }
                             }
-                        //}
                     }
                 default:
                     if let s = view.surface {
                         s.detach()
                         view.surface = nil
                     }
-                    // TODO: add hard clip
                     if let c = view.background {
                         if c.a == 1 {
                             g.fill(rect:view.frame,color:c)
@@ -362,7 +348,9 @@ public class Viewport : NodeUI {
                     }
                     if opaques.count == 0 {
                         for v in subviews {
-                            render(Graphics(parent:g,matrix:v.matrixRender,clip:v.bounds,clipping:v.clipping),view:v)
+                            if let gg = Graphics(parent:g,matrix:v.matrixRender,clip:v.bounds,clipping:v.clipping) {
+                                render(gg,view:v)
+                            }
                         }
                     } else {
                         Debug.notImplemented()
@@ -437,11 +425,8 @@ public class Viewport : NodeUI {
     }
     public func touches(_ touches:[TouchLocation]) {
         onTouches.dispatch(touches)
-        // TODO: focusedView is for keyboard/keypad/remote focus, maybe need another kind of  focus (touch /mousecapture)
         if let v=rootView {
-            //Debug.info("viewport: \(touches[0].state)")
-            let _ = v.touches(TouchLocation.transform(touches:touches,matrix:v.matrix))
-            //Debug.info("viewport: returns \(r)")
+            _ = v.touches(TouchLocation.transform(touches:touches,matrix:v.matrix))
         }
     }
     public func mouse(_ mo:MouseOver) {
@@ -450,11 +435,6 @@ public class Viewport : NodeUI {
         }
     }
     public func key(_ k:Key) {
-        /*
-        if let kb = k as? Keybutton {
-            Debug.warning("key: \(kb.device) \(kb.name) \(kb.pressed)")
-        }
-         */
         onKey.dispatch(k)
         if let v=focusedView {
             v.key(k)
@@ -467,7 +447,6 @@ public class Viewport : NodeUI {
         systemView.toggleFullScreen()
     }
     public func captureBackButton(_ capture:Bool) {
-        //Debug.warning("capture back button \(capture)")
         systemView.captureBackButton(capture)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -532,16 +511,31 @@ public class Viewport : NodeUI {
         Debug.info("Viewport.detach()")
         self.io.stop()
         self.bg.stop()
+        self.zz.stop()
         if let v=self.rootView {
             v.detach()
+            self.rootView = nil
         }
         self.release = true
-        //self.io.stop()        was here before
-        //self.bg.stop()
         self.refreshLock.synced {
             self.refreshers.removeAll()
         }
+        self.io.detach()
+        self.bg.detach()
+        self.zz.detach()
+        gpu.buffers?.detach()
+        gpu.buffers = nil
+        gpu.library?.detach()
+        gpu.library = nil
+        #if os(macOS) || os(iOS) || os(tvOS)
+            gpu.loader = nil
+            gpu.device = nil
+        #else
+            gpu.engine = nil
+        #endif
         super.detach()
+        Atom.debugInfo()
+        Debug.info("Viewport detached")
     }
     public var uiThread : Bool {
         if let b = Thread.current["ui.thread"] as? Bool {
@@ -577,8 +571,9 @@ public class Viewport : NodeUI {
         return _zz!
     }
     public func cancelJobs(_ owner:NodeUI) {
-        bg.cancel(owner)
-        io.cancel(owner)
+        _bg?.cancel(owner)
+        _io?.cancel(owner)
+        _zz?.cancel(owner)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////

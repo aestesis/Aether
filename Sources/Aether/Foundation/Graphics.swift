@@ -57,6 +57,9 @@ open class Graphics : NodeUI {
         }
         return g
     }
+    public var extendedBlendSupported : Bool {
+        return self["program.color.multiply"] != nil
+    }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func fill(rect:Rect,blend:BlendMode=BlendMode.opaque,color:Color) {
@@ -155,7 +158,7 @@ open class Graphics : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func blendParam(_ p:Float32)   {
-        let b=buffer(MemoryLayout<Float32>.size)
+        let b=buffer(MemoryLayout<Float32>.stride)
         b.data { pd in 
             let ptr = pd.assumingMemoryBound(to: Float32.self)
             ptr[0] = p
@@ -197,7 +200,7 @@ open class Graphics : NodeUI {
     public func draw(triangle vs:[Vertice],image:Bitmap,sampler smp:String="sampler.clamp",blend:BlendMode=BlendMode.opaque) {
         program("program.texture",blend:blend)
         uniforms(matrix)
-        textureVertices(vs.count*2) { vert in   // TODO: WTF, needs to mul x2 ???
+        textureVertices(vs.count) { vert in   
             for i in 0..<vs.count {
                 let v=vs[i]
                 vert[i] = TextureVertice(position:v.position.infloat3,uv:v.uv.infloat2,color:v.color.infloat4)
@@ -211,7 +214,7 @@ open class Graphics : NodeUI {
     public func draw(sprites:[PointSprite],image:Bitmap,scale:Double=1,blend:BlendMode=BlendMode.opaque) {
         program("program.texture",blend:blend)
         uniforms(matrix)
-        textureVertices(6*sprites.count*2) { vert in // TODO: WTF, needs to mul x2 ???
+        textureVertices(6*sprites.count) { vert in 
             var i = 0
             let s=Rect(x:0,y:0,w:1,h:1)
             for sp in sprites {
@@ -259,7 +262,7 @@ open class Graphics : NodeUI {
         program("program.texture",blend:blend)
         uniforms(matrix)
         
-        textureVertices(6*rl.count*2) { vert in     // TODO: fix it! need x2,ugly patch, buffer too short on iOS, WTF ???
+        textureVertices(6*rl.count) { vert in
             let cl=color.infloat4
             var i=0
             for r in rl {
@@ -302,7 +305,7 @@ open class Graphics : NodeUI {
         ]
         program("program.gradient.mask",blend:blend)
         uniforms(matrix)
-        textureMaskVertices(6*rl.count*2) { vert in
+        textureMaskVertices(6*rl.count) { vert in
             let cl=color.infloat4
             var i=0
             for r in rl {
@@ -353,7 +356,7 @@ open class Graphics : NodeUI {
         ]
         program("program.texture.bitmap.mask",blend:blend)
         uniforms(matrix)
-        textureMaskVertices(6*rl.count*2) { vert in // TODO: fix it! ugly patch, buffer too short on iOS, WTF ???
+        textureMaskVertices(6*rl.count) { vert in
             let cl=color.infloat4
             var i=0
             for r in rl {
@@ -444,7 +447,7 @@ open class Graphics : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func blurParam(_ p:float2)   {
-        let b=buffer(MemoryLayout<float2>.size)
+        let b=buffer(MemoryLayout<float2>.stride)
         b.data { pd in
             let ptr=pd.assumingMemoryBound(to:float2.self)
             ptr[0]=p
@@ -528,9 +531,9 @@ open class Graphics : NodeUI {
                 break
             case .triangle_FAN:
                 let nidx=(s.vertices.count-2)*3
-                let b=buffer(MemoryLayout<UInt32>.size*nidx)
+                let b=buffer(MemoryLayout<UInt32>.stride*nidx)
                 b.data { ptr in 
-                    let index=ptr.assumingMemoryBound(to: UInt32.self)    //UnsafeMutablePointer<UInt32>(b.ptr)
+                    let index=ptr.assumingMemoryBound(to: UInt32.self)
                     let first:UInt32=0
                     var last:UInt32=1
                     var d:Int=0
@@ -801,16 +804,20 @@ open class Graphics : NodeUI {
         let br=m.transform(Vec3(r.bottomRight))
         return Rect(x:min(tl.x,br.x),y:min(tl.y,br.y),w:abs(br.x-tl.x),h:abs(br.y-tl.y))
     }
-    public func setClipping() {
+    public func setClipping() -> Bool {
         let gpu = Mat4.gpu(size:self.output).inverted
         let tl = gpu.transform(Vec3(clip.topLeft))
         let br = gpu.transform(Vec3(clip.bottomRight))
         let r = Rect(x:min(tl.x,br.x),y:min(tl.y,br.y),w:abs(br.x-tl.x),h:abs(br.y-tl.y)).ceil
-        render.clip(rect:r)
+        if r.w>0 && r.h>0 {
+            render.clip(rect:r)
+            return true
+        }
+        return false
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(parent g:Graphics,matrix m:Mat4=Mat4.identity,clip:Rect,clipping:Bool=false) {
+    public init?(parent g:Graphics,matrix m:Mat4=Mat4.identity,clip:Rect,clipping:Bool=false) {
         self.matrix=m*g.matrix
         self.output=g.output
         self.clip = g.clip.intersection(Graphics.transformClip(self.matrix,clip))
@@ -819,7 +826,9 @@ open class Graphics : NodeUI {
         renderOwner = false
         super.init(parent:g)
         if clipping {
-            self.setClipping()
+            if !self.setClipping() {
+                return nil
+            }
         }
     }
     public init(parent g:Graphics,matrix m:Mat4=Mat4.identity) {
@@ -871,7 +880,7 @@ open class Graphics : NodeUI {
             while let gn = g.parent as? Graphics {
                 g = gn
                 if g.renderOwner || g.clipping {
-                    g.setClipping()
+                    _ = g.setClipping()
                     break
                 }
             }
@@ -989,7 +998,7 @@ open class Graphics : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func colorVertices(_ n:Int, fn:(UnsafeMutablePointer<ColorVertice>)->()) {
-        let b=buffer(n * MemoryLayout<ColorVertice>.size)
+        let b=buffer(n * MemoryLayout<ColorVertice>.stride)
         render.use(vertexBuffer:b,atIndex:0)
         b.data { ptr in
             fn(ptr.assumingMemoryBound(to: ColorVertice.self))
@@ -997,7 +1006,7 @@ open class Graphics : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func textureVertices(_ n:Int, fn: (UnsafeMutablePointer<TextureVertice>)->()) {
-        let b=buffer(n * MemoryLayout<TextureVertice>.size)
+        let b=buffer(n * MemoryLayout<TextureVertice>.stride)
         render.use(vertexBuffer:b,atIndex:0)
         b.data { ptr in
             fn(ptr.assumingMemoryBound(to: TextureVertice.self))
@@ -1005,7 +1014,7 @@ open class Graphics : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func textureMaskVertices(_ n:Int, fn:(UnsafeMutablePointer<TextureMaskVertice>)->()) {
-        let b=buffer(n * MemoryLayout<TextureMaskVertice>.size)
+        let b=buffer(n * MemoryLayout<TextureMaskVertice>.stride)
         render.use(vertexBuffer:b,atIndex:0)
         b.data { ptr in
             fn(ptr.assumingMemoryBound(to: TextureMaskVertice.self))
@@ -1013,7 +1022,7 @@ open class Graphics : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func blurVertices(_ n:Int,fn:(UnsafeMutablePointer<BlurVertice>)->()) {
-        let b=buffer(n * MemoryLayout<BlurVertice>.size)
+        let b=buffer(n * MemoryLayout<BlurVertice>.stride)
         render.use(vertexBuffer:b,atIndex:0)
         b.data { ptr in
             fn(ptr.assumingMemoryBound(to: BlurVertice.self))
@@ -1021,7 +1030,7 @@ open class Graphics : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func blendVertices(_ n:Int,fn:(UnsafeMutablePointer<BlendVertice>)->()) {
-        let b=buffer(n * MemoryLayout<BlendVertice>.size)
+        let b=buffer(n * MemoryLayout<BlendVertice>.stride)
         render.use(vertexBuffer:b,atIndex:0)
         b.data { ptr in
             fn(ptr.assumingMemoryBound(to: BlendVertice.self))
@@ -1029,7 +1038,7 @@ open class Graphics : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func uniforms(_ matrix:Mat4)   {
-        let b=buffer(MemoryLayout<Uniforms>.size)
+        let b=buffer(MemoryLayout<Uniforms>.stride)
         b.data { p in
             let ptr=p.assumingMemoryBound(to: Uniforms.self) 
             ptr[0]=Uniforms(matrix:matrix.infloat4x4)
@@ -1038,7 +1047,7 @@ open class Graphics : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func uniforms(view:Mat4,world:Mat4,eye:Vec3)   {
-        let b=buffer(MemoryLayout<Uniforms3D>.size)
+        let b=buffer(MemoryLayout<Uniforms3D>.stride)
         b.data { p in
             let ptr=p.assumingMemoryBound(to: Uniforms3D.self)
             ptr[0]=Uniforms3D(view:view.infloat4x4,world:world.infloat4x4,eye:eye.infloat3)
