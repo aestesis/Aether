@@ -9,10 +9,16 @@ layout (binding = 0) uniform UBO {
 
 layout ( location = 0 ) in vec3 inPosition;
 layout ( location = 1 ) in vec4 inColor;
+layout ( location = 2 ) in vec2 inUV;
+layout ( location = 3 ) in vec2 inUVmask;
 
 layout ( location = 0 ) out vec4 outColor;
+layout ( location = 1 ) out vec2 outUV;
+layout ( location = 2 ) out vec2 outUVmask;
 
 void main() {
     outColor = inColor;
+    outUV = inUV;
+    outUVmask = inUVmask;
     gl_Position = ubo.matrix * vec4(inPosition,1);
 }

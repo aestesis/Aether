@@ -577,6 +577,17 @@ import Foundation
                     
                 }
             }
+            mutating func reset() {
+                sampler.removeAll()
+                vertexBuffer.removeAll()
+                fragmentBuffer.removeAll()
+                vertexTexture.removeAll()
+                fragmentTexture.removeAll()
+                depth = nil
+                clip = .zero
+                cull = .front
+                winding = .clockwise
+            }
         }
 
         public let onDone=Event<Result>()
@@ -585,11 +596,12 @@ import Foundation
 
         var states = ProgramStates()
 
+        public func use(program:Program) {
+            states.reset()
+            states.program = program
+        }
         func use(_ sampler:Sampler, atIndex index:Int=0) {
             states.sampler[index] = sampler
-        }
-        public func use(program:Program) {
-            states.program = program
         }
         public func use(state:DepthStencilState) {
             states.depth = state

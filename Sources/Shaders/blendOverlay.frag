@@ -1,0 +1,34 @@
+
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+
+layout (binding = 1) uniform sampler2D base;
+layout (binding = 2) uniform sampler2D over;
+
+layout (location = 0) in vec4 inColor;
+layout (location = 1) in vec2 inUV;
+
+layout (location = 0) out vec4 outFragColor;
+
+
+float mixOverlay(float a, float b) {
+    if(a<0.5)
+        return 2.0*a*b;
+    else
+        return 1.0-2.0*(1.0-a)*(1.0-b);
+}
+
+void main() {
+    const vec3 zero = vec3(0,0,0);
+    const vec3 one = vec3(1,1,1);
+    const vec3 two = one * 2.0;
+    const float e = 1e-10;
+
+    vec4 cb = texture(base, inUV);
+    vec4 c0 = texture(over, inUV);
+    vec4 co = c0 * inColor;
+    vec3 blend = vec3(mixOverlay(cb.r,co.r),mixOverlay(cb.g,co.g),mixOverlay(cb.b,co.b));
+    outFragColor =  vec4(mix(cb.rgb,blend,co.a),c0.a);
+}

@@ -157,24 +157,16 @@ open class Graphics : NodeUI {
         render.draw(trianglestrip:4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func blendParam(_ p:Float32)   {
-        let b=buffer(MemoryLayout<Float32>.stride)
-        b.data { pd in 
-            let ptr = pd.assumingMemoryBound(to: Float32.self)
-            ptr[0] = p
-        }
-        render.use(fragmentBuffer:b,atIndex:0)
-    }
-    public func blend(rect:Rect,base:Bitmap,overlay:Bitmap,blend:BlendMode=BlendMode.opaque,opacity:Double=1.0) {
+    public func blend(rect:Rect,base:Bitmap,overlay:Bitmap,blend:BlendMode=BlendMode.opaque,color:Color=Color.white) {
+        // TODO: newer version for vulkan, actualize metal shaders (no more blendvertice & blendparams)
         program("program.blend",blend:blend)
         uniforms(matrix)
-        blendParam(Float32(opacity))
-        blendVertices(4) { vert in
+        textureVertices(4) { vert in
             let strip=rect.strip
             let rs = Rect(x:0,y:0,w:1,h:1)
             let uv=rs.strip
             for i in 0...3 {
-                vert[i]=BlendVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
+                vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
             }
         }
         sampler("sampler.clamp")
@@ -1127,28 +1119,28 @@ open class Graphics : NodeUI {
         viewport["sampler.clamp.mirror"]=Sampler(viewport:viewport,modeX:Sampler.Mode.clamp,modeY:Sampler.Mode.mirror)
         viewport["font.default"]=Font(parent:viewport,name:"Helvetica",size:24)
         
-        viewport["program.blend.multiply"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendMultiply",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.screen"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendScreen",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.overlay"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendOverlay",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.softlight"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendSoftLight",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.add"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendAdd",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.lighten"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendLighten",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.darken"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendDarken",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.average"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendAverage",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.substract"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendSubstract",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.difference"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendDifference",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.negation"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendNegation",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.colordodge"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendColorDodge",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.colorburn"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendColorBurn",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.hardlight"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendHardLight",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.reflect"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendReflect",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.glow"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendGlow",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.phoenix"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendPhoenix",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.sub"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendSub",blend:BlendMode.opaque,fmt:[.float3,.float2])
-        viewport["program.blend.exclusion"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendExclusion",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.multiply"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendMultiply",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.screen"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendScreen",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.overlay"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendOverlay",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.softlight"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendSoftLight",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.add"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendAdd",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.lighten"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendLighten",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.darken"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendDarken",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.average"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendAverage",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.substract"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendSubstract",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.difference"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendDifference",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.negation"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendNegation",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.colordodge"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendColorDodge",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.colorburn"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendColorBurn",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.hardlight"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendHardLight",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.reflect"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendReflect",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.glow"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendGlow",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.phoenix"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendPhoenix",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.sub"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendSub",blend:BlendMode.opaque,fmt:[.float3,.float2])
+        viewport["program.blend.exclusion"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"blendExclusion",blend:BlendMode.opaque,fmt:[.float3,.float2])
         
         Program.populateDefaultBlendModes(store:viewport,key:"program.gradient",library:viewport.gpu.library!,vertex:"textureFuncVertex",fragment:"gradientFragment",fmt:[.float3,.float4,.float2])
-        Program.populateDefaultBlendModes(store:viewport,key:"program.gradient.alt",library:viewport.gpu.library!,vertex:"textureFuncVertex",fragment:"altGradientFragment",fmt:[.float3,.float4,.float2])
+        Program.populateDefaultBlendModes(store:viewport,key:"program.gradient.alt",library:viewport.gpu.library!,vertex:"textureFuncVertex",fragment:"gradientFragmentAlt",fmt:[.float3,.float4,.float2])
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
