@@ -93,13 +93,13 @@ import Foundation
             command!.setFragmentSamplerState(sampler.state, index:index)
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func use(program:Program) {
-        if useDepth {
-            command!.setRenderPipelineState(program.rpsdepth!)
-        } else {
-            command!.setRenderPipelineState(program.rpsnodepth!)
+        public func use(program:Program) {
+            if useDepth {
+                command!.setRenderPipelineState(program.rpsdepth!)
+            } else {
+                command!.setRenderPipelineState(program.rpsnodepth!)
+            }
         }
-    }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         public func use(state:DepthStencilState) {
             command!.setDepthStencilState(state.state)
@@ -352,31 +352,27 @@ import Foundation
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public class Program : NodeUI {
-        
         // TODO: MetaProgram using MTLRenderPipelineReflection
-        
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        var rps:MTLRenderPipelineState?
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        var rpsdepth:MTLRenderPipelineState?
+        var rpsnodepth:MTLRenderPipelineState?
         public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[MTLVertexFormat]) {
             super.init(parent:viewport)
-            self.initSelf(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt))
+            rpsnodepth = self.createPipelineState(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt),depth:.invalid)
+            rpsdepth = self.createPipelineState(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt),depth:.depth32Float)
         }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,vdesc:MTLVertexDescriptor) {
             super.init(parent:viewport)
-            self.initSelf(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:vdesc)
+            rpsnodepth = self.createPipelineState(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt),depth:.invalid)
+            rpsdepth = self.createPipelineState(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt),depth:.depth32Float)
         }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         public init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[MTLVertexFormat]) {
             super.init(parent:library)
-            self.initSelf(library,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt))
+            rpsnodepth = self.createPipelineState(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt),depth:.invalid)
+            rpsdepth = self.createPipelineState(viewport.gpu.library!,vertex:vertex,fragment:fragment,blend:blend,vdesc:Program.VertexDescriptor(fmt),depth:.depth32Float)
         }
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        private func initSelf(_ library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,vdesc:MTLVertexDescriptor) {
+        private func createPipelineState(_ library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,vdesc:MTLVertexDescriptor,depth:MTLPixelFormat) -> MTLRenderPipelineState? {
             let pipe=MTLRenderPipelineDescriptor()
             let ca=pipe.colorAttachments[0]
             ca?.pixelFormat=MTLPixelFormat.bgra8Unorm
@@ -433,14 +429,15 @@ import Foundation
             pipe.vertexFunction=library.lib!.makeFunction(name: vertex)!
             pipe.fragmentFunction=library.lib!.makeFunction(name: fragment)!
             pipe.vertexDescriptor=vdesc
-            pipe.depthAttachmentPixelFormat = .depth32Float
+            pipe.depthAttachmentPixelFormat = depth
             do {
-                try rps=viewport!.gpu.device!.makeRenderPipelineState(descriptor: pipe)
+                let rps = try viewport!.gpu.device!.makeRenderPipelineState(descriptor: pipe)
+                return rps
             } catch {
                 Debug.error("error: Program.initSelf()")
             }
+            return nil
         }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         public static func VertexDescriptor(_ fmt:[MTLVertexFormat]) -> MTLVertexDescriptor {
             let vd=MTLVertexDescriptor()
@@ -472,9 +469,7 @@ import Foundation
                 Debug.notImplemented()
                 return 0
             }
-            //////////////////////////////////////////////////////////////////////////////////////////////////////////
         }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         public static func populateDefaultBlendModes(store:NodeUI,key:String,library:ProgramLibrary,vertex:String,fragment:String,fmt:[MTLVertexFormat]) {
             for bm in BlendMode.defaultModes {
@@ -501,7 +496,6 @@ import Foundation
             }
         }
     }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public class Buffer : NodeUI {
@@ -543,8 +537,9 @@ import Foundation
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
 #else
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public class RenderPass : NodeUI {
         public enum Result {
             case error
@@ -689,7 +684,9 @@ import Foundation
             return buffer!.size
         }
     }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public typealias VertexFormat = Tin.Pipeline.VertexFormat
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public class Program : NodeUI {
         let vertexName : String
         let fragmentName : String
@@ -744,14 +741,14 @@ import Foundation
             }
         }
     }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public class ProgramLibrary : NodeUI {  // not used with vulkan
         public init(parent:NodeUI,filename:String="default") {
             super.init(parent:parent)
         }
     }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
 #endif
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class Buffers : NodeUI {
@@ -796,6 +793,5 @@ public class Buffers : NodeUI {
         }
     }
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

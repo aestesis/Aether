@@ -28,7 +28,7 @@ public class MaterialHeightMap : Material {
     }
     func setBuffer(size:Size,scale:Double,adjustNormals:Double) {
         let gpu = GPUheight(width:Float32(size.width),height:Float32(size.height),scale:Float32(scale),adjustNormals:Float32(adjustNormals));
-        let buffer = self.persitentBuffer(MemoryLayout<GPUheight>.size)
+        let buffer = self.persitentBuffer(MemoryLayout<GPUheight>.stride)
         let b = buffer.ptr.assumingMemoryBound(to: GPUheight.self)
         b[0] = gpu
         self.buffer = buffer
@@ -109,7 +109,7 @@ open class Particles : Node3D {
                 }
             }
             if bufferParticles == nil {
-                bufferParticles = self.persitentBuffer(MemoryLayout<GPUparticle>.size*particles.count)
+                bufferParticles = self.persitentBuffer(MemoryLayout<GPUparticle>.stride*particles.count)
             }
             if let bp=bufferParticles {
                 let pp = bp.ptr.assumingMemoryBound(to: GPUparticle.self)

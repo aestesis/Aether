@@ -403,7 +403,7 @@ public class PointLight : Light {
         self.color=color
         self.attenuation=attenuation
         super.init(parent:parent,position:position)
-        self.buffer = self.persitentBuffer(MemoryLayout<GPU>.size)
+        self.buffer = self.persitentBuffer(MemoryLayout<GPU>.stride)
         viewport?.pulse.alive(self) {
             self.needsUpdate=true
         }
@@ -449,7 +449,7 @@ public class DirectionalLight : Light {
         self.intensity=intensity
         self.direction=direction
         super.init(parent:parent,position:Vec3.zero)
-        self.buffer = self.persitentBuffer(MemoryLayout<GPU>.size)
+        self.buffer = self.persitentBuffer(MemoryLayout<GPU>.stride)
     }
     override public func detach() {
         if let b=buffer {
@@ -519,7 +519,7 @@ open class Material : NodeGPU {
         self.specular=specular
         self.shininess=shininess
         super.init(parent:parent)
-        self.material=self.persitentBuffer(MemoryLayout<GPU>.size)
+        self.material=self.persitentBuffer(MemoryLayout<GPU>.stride)
         if texture.length > 0 {
             self.io {
                 self.texture = Bitmap(parent:self,path:texture)
@@ -535,7 +535,7 @@ open class Material : NodeGPU {
         self.specular=specular
         self.shininess=shininess
         super.init(parent:parent)
-        self.material=self.persitentBuffer(MemoryLayout<GPU>.size)
+        self.material=self.persitentBuffer(MemoryLayout<GPU>.stride)
         self.texture = Bitmap(parent:self,size:texture)
     }
     override open func detach() {
@@ -1117,7 +1117,7 @@ open class Mesh : NodeGPU {
         if needsVerticesUpdate {
             needsVerticesUpdate=false
             if bufferVertices == nil {
-                bufferVertices = self.persitentBuffer(MemoryLayout<GPUvertice>.size*vertices.count)
+                bufferVertices = self.persitentBuffer(MemoryLayout<GPUvertice>.stride*vertices.count)
             }
             if let bv=bufferVertices {
                 bv.data { p in
@@ -1135,12 +1135,12 @@ open class Mesh : NodeGPU {
             for m in faces.keys {
                 if let f=faces[m] {
                     if bufferFaces[m] == nil {
-                        bufferFaces[m] = self.persitentBuffer(MemoryLayout<Float32>.size*f.count)
+                        bufferFaces[m] = self.persitentBuffer(MemoryLayout<Float32>.stride*f.count)
                     }
                     if let bf = bufferFaces[m] {
                         bf.data { p in 
                             let pv = p.assumingMemoryBound(to: Float32.self)
-                            memcpy(pv,f,MemoryLayout<Float32>.size*f.count)
+                            memcpy(pv,f,MemoryLayout<Float32>.stride*f.count)
                         }
                     }
                 }
