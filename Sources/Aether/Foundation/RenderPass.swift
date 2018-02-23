@@ -313,40 +313,36 @@ import Foundation
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public class DepthStencilState : NodeUI {
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         public enum Mode {
             case none
             case greater
             case lesser
             case all
         }
-            var state:MTLDepthStencilState
-            public init(viewport:Viewport,mode:Mode,write:Bool) {
-                let d=MTLDepthStencilDescriptor()
-                d.isDepthWriteEnabled = write
-                switch mode {
-                case .none:
-                    d.depthCompareFunction = .never
-                case .greater:
-                    d.depthCompareFunction = .greaterEqual
-                case .lesser:
-                    d.depthCompareFunction = .lessEqual
-                case .all:
-                    d.depthCompareFunction = .always
-                }
-                state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
-                super.init(parent:viewport)
-            }
-            public init(viewport:Viewport) {
-                let d=MTLDepthStencilDescriptor()
-                d.isDepthWriteEnabled = false
+        var state:MTLDepthStencilState
+        public init(viewport:Viewport,mode:Mode,write:Bool) {
+            let d=MTLDepthStencilDescriptor()
+            d.isDepthWriteEnabled = write
+            switch mode {
+            case .none:
+                d.depthCompareFunction = .never
+            case .greater:
+                d.depthCompareFunction = .greaterEqual
+            case .lesser:
+                d.depthCompareFunction = .lessEqual
+            case .all:
                 d.depthCompareFunction = .always
-                state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
-                super.init(parent:viewport)
             }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+            state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
+            super.init(parent:viewport)
+        }
+        public init(viewport:Viewport) {
+            let d=MTLDepthStencilDescriptor()
+            d.isDepthWriteEnabled = false
+            d.depthCompareFunction = .always
+            state = viewport.gpu.device!.makeDepthStencilState(descriptor:d)!
+            super.init(parent:viewport)
+        }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -550,51 +546,27 @@ import Foundation
             case none
             case front
             case back
+            var system : Tin.Pipeline.States.CullMode {
+                switch self {
+                    case .none: 
+                    return .none
+                    case .front: 
+                    return .front
+                    case .back: 
+                    return .back
+                }
+            }
         }
         public enum Winding {
             case clockwise
             case counterClockwise
-        }
-        struct ProgramStates {
-            var program : Program?
-            var sampler = [Int:Sampler]()
-            var vertexBuffer = [Int:Buffer]()
-            var fragmentBuffer = [Int:Buffer]()
-            var vertexTexture = [Int:Texture2D]()
-            var fragmentTexture = [Int:Texture2D]()
-            var depth : DepthStencilState?
-            var clip = Rect.zero
-            var cull = CullMode.front
-            var winding = Winding.clockwise
-            func createLayout() {
-                for s in sampler {
-
-                }
-                for v in vertexBuffer {
-
-                }
-                for f in fragmentBuffer {
-                    
-                }
-            }
-            mutating func reset() {
-                sampler.removeAll()
-                vertexBuffer.removeAll()
-                fragmentBuffer.removeAll()
-                vertexTexture.removeAll()
-                fragmentTexture.removeAll()
-                depth = nil
-                clip = .zero
-                cull = .front
-                winding = .clockwise
-            }
         }
 
         public let onDone=Event<Result>()
 
         var renderPass:Tin.RenderPass
 
-        var states = ProgramStates()
+        var states = Program.States()
 
         public func use(program:Program) {
             states.reset()
@@ -627,21 +599,25 @@ import Foundation
         public func set(front:Winding) {
             states.winding = front
         }
-        func createPipeline() -> Tin.Pipeline? {
-            //pipeline = program.createPipeline(renderpass:self)
-            return nil
-        }
         public func draw(triangle n:Int) {
+            if let pipe = states.program?.createPipeline(renderpass:self,primitive:.triangle) {
+                pipe.draw(vertexBuffer:states.vertexBuffer[0]!.buffer!,count:n)
+            }
         }
         public func draw(trianglestrip n:Int) {
+            // TODO:
         }
         public func draw(triangle n:Int,index:Buffer) {
+            // TODO: draw indirect
         }
         public func draw(line n:Int) {
+            // TODO:
         }
         public func draw(sprite n:Int) {
+            // TODO:
         }
         public func commit() {
+            // TODO:
         }
         init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
             renderPass = Tin.RenderPass(to:texture.texture!)!
@@ -669,10 +645,16 @@ import Foundation
             case lesser
             case all
         }
+        public let write:Bool 
+        public let mode:Mode
         public init(viewport:Viewport,mode:Mode,write:Bool) {
+            self.mode = mode
+            self.write = write
             super.init(parent:viewport)
         }
         public init(viewport:Viewport) {
+            self.mode = .all
+            self.write = false
             super.init(parent:viewport)
         }
     }
@@ -700,25 +682,146 @@ import Foundation
     public typealias VertexFormat = Tin.Pipeline.VertexFormat
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public class Program : NodeUI {
+        struct States {
+            typealias Primitive = Tin.Pipeline.States.Primitive
+            var program : Program?
+            var sampler = [Int:Sampler]()
+            var vertexBuffer = [Int:Buffer]()
+            var fragmentBuffer = [Int:Buffer]()
+            var vertexTexture = [Int:Texture2D]()
+            var fragmentTexture = [Int:Texture2D]()
+            var depth : DepthStencilState?
+            var clip = Rect.zero
+            var cull = RenderPass.CullMode.front
+            var winding = RenderPass.Winding.clockwise
+            func createLayout() -> [Tin.Pipeline.Binding] {
+                var bindings = [Tin.Pipeline.Binding]()
+                for vb in vertexBuffer {
+                    if vb.0 > 0 {   
+                        bindings.append(Tin.Pipeline.Binding(stage:.vertex,desc:.uniform))
+                    }
+                }
+                for _ in vertexTexture {
+                    bindings.append(Tin.Pipeline.Binding(stage:.vertex,desc:.imageSampler))
+                }
+                while bindings.count<5 { // fill the gap
+                    bindings.append(Tin.Pipeline.Binding())
+                }
+                for _ in fragmentBuffer {
+                    bindings.append(Tin.Pipeline.Binding(stage:.fragment,desc:.uniform))
+                }
+                for _ in fragmentTexture {
+                    bindings.append(Tin.Pipeline.Binding(stage:.fragment,desc:.imageSampler))
+                }
+                return bindings
+            }
+            func bindingLayout() {
+
+            }
+            func createStates(primitive:Primitive,vertex:[VertexFormat],blend:BlendMode) -> Tin.Pipeline.States {
+                var st = Tin.Pipeline.States()
+                st.viewport = Tin.Box(x:-1.0,y:-1.0,z:-1.0,width:2.0,height:2.0,depth:2.0)  // TODO: fix, right value ??
+                st.scisor = Tin.Rect(x:Float(clip.x),y:Float(clip.y),w:Float(clip.w),h:Float(clip.h))
+                st.primitive = primitive
+                st.vertexFormat = vertex
+                st.discard = cull.system
+                if let depth = depth {
+                    switch depth.mode {
+                        case .none:
+                        st.depth = .never
+                        case .greater:
+                        st.depth = .greater
+                        case .lesser:
+                        st.depth = .less
+                        case .all:
+                        st.depth = .always
+                    }
+                    st.depthWrite = depth.write
+                } else {
+                    st.depth = .always
+                    st.depthWrite = false
+                }
+                switch blend {
+                    case BlendMode.opaque:
+                        st.blend.enable = true
+                        st.blend.colorOp = .add
+                        st.blend.alphaOp = .max
+                        st.blend.srcColor = .one
+                        st.blend.dstColor = .zero
+                        st.blend.srcAlpha = .one
+                        st.blend.dstAlpha = .one
+                    case BlendMode.alpha:
+                        st.blend.enable = true
+                        st.blend.colorOp = .add
+                        st.blend.alphaOp = .max
+                        st.blend.srcColor = .srcAlpha
+                        st.blend.dstColor = .oneMinusSrcAlpha
+                        st.blend.srcAlpha = .one
+                        st.blend.dstAlpha = .one
+                    case BlendMode.setAlpha:
+                        st.blend.enable = true
+                        st.blend.colorOp = .add
+                        st.blend.alphaOp = .add
+                        st.blend.srcColor = .zero
+                        st.blend.dstColor = .one
+                        st.blend.srcAlpha = .one
+                        st.blend.dstAlpha = .zero
+                    case BlendMode.add:
+                        st.blend.enable = true
+                        st.blend.colorOp = .add
+                        st.blend.alphaOp = .add
+                        st.blend.srcColor = .one
+                        st.blend.dstColor = .one
+                        st.blend.srcAlpha = .one
+                        st.blend.dstAlpha = .one
+                    case BlendMode.sub:
+                        st.blend.enable = true
+                        st.blend.colorOp = .reverseSubstract
+                        st.blend.alphaOp = .add
+                        st.blend.srcColor = .one
+                        st.blend.dstColor = .one
+                        st.blend.srcAlpha = .one
+                        st.blend.dstAlpha = .one
+                    default:    // BlendMode.Copy
+                        st.blend.enable = false
+                }
+                return st
+            }
+            mutating func reset() {
+                sampler.removeAll()
+                vertexBuffer.removeAll()
+                fragmentBuffer.removeAll()
+                vertexTexture.removeAll()
+                fragmentTexture.removeAll()
+                depth = nil
+                clip = .zero
+                cull = .none
+                winding = .clockwise
+            }
+        }
         let vertexName : String
         let fragmentName : String
         var vertex : Tin.Shader?
         var fragment : Tin.Shader? 
         let vertexFormat : [VertexFormat]
+        let blend:BlendMode 
         public init(viewport:Viewport,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
             self.vertexName = vertex
             self.fragmentName = fragment
             if let vertexCode = Application.getData("Shaders/\(vertex).vert.spv") {
+                Debug.warning("shader: \(vertex).vert");
                 self.vertex = Tin.Shader(engine:viewport.gpu.engine!,code:vertexCode)
             } else {
                 Debug.error("Shaders/\(vertex).vert.spv not found")
             }
             if let fragmentCode = Application.getData("Shaders/\(fragment).frag.spv") {
+                Debug.warning("shader: \(fragment).frag");
                 self.fragment = Tin.Shader(engine:viewport.gpu.engine!,code:fragmentCode)
             } else {
                 Debug.error("Shaders/\(fragment).vert.spv not found")
             }
             self.vertexFormat = fmt
+            self.blend = blend
             super.init(parent:viewport)
         }
         public convenience init(library:ProgramLibrary,vertex:String,fragment:String,blend:BlendMode,fmt:[VertexFormat]) {
@@ -729,10 +832,10 @@ import Foundation
                 store[Program.fullKey(key,blend:bm)] = Program(library:library,vertex:vertex,fragment:fragment,blend:bm,fmt:fmt)
             }
         }
-        func createPipeline(renderpass rp:RenderPass) -> Tin.Pipeline? {
-            let st = Tin.Pipeline.States()
-            // TODO: fill states
-            return Tin.Pipeline(renderpass:rp.renderPass,vertex:vertex!,fragment:fragment!,states:st)
+        func createPipeline(renderpass rp:RenderPass,primitive:States.Primitive) -> Tin.Pipeline? {
+            let states = rp.states.createStates(primitive:primitive,vertex:vertexFormat,blend:blend)
+            let bindings = rp.states.createLayout()
+            return Tin.Pipeline(renderpass:rp.renderPass,vertex:vertex!,fragment:fragment!,states:states,bindings:bindings)
         }
         public static func fullKey(_ key:String,blend:BlendMode) -> String{
             switch blend {

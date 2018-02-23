@@ -4,8 +4,8 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 
-layout (binding = 1) uniform sampler2D source;
-layout (binding = 2) uniform Args {
+layout (binding = 5) uniform sampler2D source;
+layout (binding = 6) uniform Args {
     vec2 sigma;
 } args;
 

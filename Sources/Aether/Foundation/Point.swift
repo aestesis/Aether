@@ -66,7 +66,7 @@ public struct Point : CustomStringConvertible,JsonConvertible {
         return self.lerp(to,coef:coef.value)
     }
     public var normalize:Point {
-        return Point(x/length,y+length)
+        return Point(x/length,y/length)
     }
     public func rect(w:Double,h:Double) -> Rect {
         return Rect(x:x-w*0.5,y:y-h*0.5,w:w,h:h)
@@ -75,7 +75,7 @@ public struct Point : CustomStringConvertible,JsonConvertible {
         return Rect(x:x-s.w*0.5,y:y-s.h*0.5,w:s.w,h:s.h)
     }
     public var round: Point {
-        return Point(Foundation.round(self.x),Foundation.round(y))
+        return Point(Foundation.round(x),Foundation.round(y))
     }
     public var json: JSON {
         return JSON(["x":x,"y":y])

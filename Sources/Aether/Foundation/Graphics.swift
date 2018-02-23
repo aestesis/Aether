@@ -1060,6 +1060,7 @@ open class Graphics : NodeUI {
         viewport["program.color.add"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorFuncFragment",blend:BlendMode.add,fmt:[.float3,.float4])
         viewport["program.color.sub"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorFuncFragment",blend:BlendMode.sub,fmt:[.float3,.float4])
         #if os(tvOS) || os(iOS)
+            // TODO: android https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_shader_framebuffer_fetch.txt
             viewport["program.color.multiply"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendMultiply",blend:BlendMode.opaque,fmt:[.float3,.float4])
             viewport["program.color.screen"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendScreen",blend:BlendMode.opaque,fmt:[.float3,.float4])
             viewport["program.color.overlay"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendOverlay",blend:BlendMode.opaque,fmt:[.float3,.float4])
