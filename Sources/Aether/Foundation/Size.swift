@@ -253,16 +253,16 @@ public struct SizeI {
     public init(json: JSON) {
         #if os(macOS) || os(iOS) || os(tvOS)
             if let w=json["width"].number {
-                width=Int(truncating:w)
+                width=Int(w)
             } else if let w=json["w"].number {
-                width=Int(truncating:w)
+                width=Int(w)
             } else {
                 width=0;
             }
             if let h=json["height"].number {
-                height=Int(truncating:h)
+                height=Int(h)
             } else if let h=json["h"].number {
-                height=Int(truncating:h)
+                height=Int(h)
             } else {
                 height=0;
             }

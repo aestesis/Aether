@@ -601,7 +601,7 @@ import Foundation
         }
         public func draw(triangle n:Int) {
             if let pipe = states.program?.createPipeline(renderpass:self,primitive:.triangle) {
-                let binding = [Int]()   // TODO: get real binding
+                let binding = [Int]()   // TODO: what is this binding ??
                 pipe.draw(vertexBuffer:states.vertexBuffer[0]!.buffer!,binding:binding,count:n)
             }
         }

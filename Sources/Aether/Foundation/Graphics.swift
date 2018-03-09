@@ -21,6 +21,8 @@ import Foundation
 #if os(macOS) || os(iOS) || os(tvOS)
     import Metal
     import MetalKit
+#else
+    import Uridium
 #endif
 
 #if os(macOS)
@@ -846,6 +848,17 @@ open class Graphics : NodeUI {
             self.output=viewport.size
             self.clip = Graphics.transformClip(m,(clip ?? Rect(o:Point.zero,s:viewport.size)))
             self.render=RenderPass(viewport:viewport,clear:clear,depthClear:depthClear,descriptor:descriptor,drawable:drawable,depth:depth)
+            renderOwner = true
+            super.init(parent:viewport)
+        }
+    #else
+        public init(viewport:Viewport,image:Tin.Image,clear:Color?=nil,depthClear:Double=1.0,clip:Rect?=nil) {
+            let m = Mat4.gpu(size:viewport.size)
+            self.matrix=m
+            self.output=viewport.size
+            self.clip = Graphics.transformClip(m,(clip ?? Rect(o:Point.zero,s:viewport.size)))
+            // init(viewport:Viewport,clear:Color?=nil,depthClear:Double=1.0,image:Tin.Image)
+            self.render=RenderPass(viewport:viewport,clear:clear,depthClear:depthClear,image:image)
             renderOwner = true
             super.init(parent:viewport)
         }

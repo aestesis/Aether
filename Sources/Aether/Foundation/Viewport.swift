@@ -182,11 +182,10 @@ public class Viewport : NodeUI {
             lastFrame = t
         }
     #else
-        public func draw() {
+        public func draw(to image:Tin.Image) {
             nframes += 1
-            /*
             if let v=rootView {
-                let g=Graphics(viewport:self,descriptor:descriptor,drawable:drawable,depth:depth,clear:v.background)
+                let g=Graphics(viewport:self,image:image,clear:v.background)    // TODO: add depth surface
                 render(g,view:v)
                 g.done { ok in
                     if ok == .error {
@@ -194,14 +193,13 @@ public class Viewport : NodeUI {
                     }
                 }
             } else {
-                let g=Graphics(viewport:self,descriptor:descriptor,drawable:drawable,clear:Color.aeMagenta)
+                let g=Graphics(viewport:self,image:image,clear:Color.aeMagenta)
                 g.done { ok in
                     if ok == .error {
                         Debug.error("Viewport.draw(nil): GPU error")
                     }
                 }
             }
-            */
             let t=ß.time
             fps = 1 / (t-lastFrame)
             lastFrame = t

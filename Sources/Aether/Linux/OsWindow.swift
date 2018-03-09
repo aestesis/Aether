@@ -44,7 +44,7 @@ public class OsWindow : Window,SystemView {
     }
     public func captureBackButton(_ capture:Bool) {
     }
-    public override func render() {
+    public override func render(to image:Tin.Image) {
         if viewport == nil {
             viewport = Viewport(systemView:self,engine:engine!,size:Size(Double(width),Double(height)))
             self.onStartUI.dispatch(viewport!)
@@ -54,7 +54,7 @@ public class OsWindow : Window,SystemView {
             vp.size = size
             // TODO: mouse/keyboard
             vp.update()
-            vp.draw()
+            vp.draw(to:image)
         }
     }
     public override init?(title:String,width:Int,height:Int) {
