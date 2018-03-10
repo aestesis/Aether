@@ -606,7 +606,10 @@ import Foundation
             }
         }
         public func draw(trianglestrip n:Int) {
-            // TODO:
+            if let pipe = states.program?.createPipeline(renderpass:self,primitive:.triangleStrip) {
+                let binding = [Int]()   // TODO: what is this binding ??
+                pipe.draw(vertexBuffer:states.vertexBuffer[0]!.buffer!,binding:binding,count:n)
+            }
         }
         public func draw(triangle n:Int,index:Buffer) {
             // TODO: draw indirect
@@ -621,11 +624,19 @@ import Foundation
             // TODO:
         }
         init(texture:Texture2D,clear:Color?=nil,depthClear:Double?=nil,storeDepth:Bool=false) {
-            renderPass = Tin.RenderPass(to:texture.texture!)!
+            if let c=clear {    // TODO: add depthClear
+                renderPass = Tin.RenderPass(to:texture.texture!,clearColor:[Float(c.r),Float(c.g),Float(c.b),Float(c.a)])!
+            } else {
+                renderPass = Tin.RenderPass(to:texture.texture!)!
+            }
             super.init(parent:texture)
         }
         init(viewport:Viewport,clear:Color?=nil,depthClear:Double=1.0,image:Tin.Image) {
-            renderPass = Tin.RenderPass(to:image)!
+            if let c=clear {    // TODO: add depthClear
+                renderPass = Tin.RenderPass(to:image,clearColor:[Float(c.r),Float(c.g),Float(c.b),Float(c.a)])!
+            } else {
+                renderPass = Tin.RenderPass(to:image)!
+            }
             super.init(parent:viewport)
         }
     }
