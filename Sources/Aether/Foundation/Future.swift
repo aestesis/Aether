@@ -201,7 +201,7 @@ public class Worker : NodeUI {
     public func debugInfo() {
         for k in running.keys {
             if running[k]!>5 {
-                Debug.info("running \(k.className)  \(running[k]!)")
+                Debug.info("running \(k)  \(running[k]!)")
             }
         }
     }

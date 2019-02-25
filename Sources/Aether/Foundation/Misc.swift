@@ -20,7 +20,6 @@
 import Foundation
 import SwiftyJSON
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,11 +54,11 @@ public class Misc {
     public static var alphaID:String {
         let data:String="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         var id:String="";
-        for _ in 1...12 {
+        for _ in 1...16 {
             #if os(macOS) || os(iOS) || os(tvOS)
-                let n:Int=Int(arc4random_uniform(UInt32(UInt(data.characters.count))))
+                let n:Int=Int(arc4random_uniform(UInt32(UInt(data.count))))
             #else
-                let n:Int=Int(rand())%data.characters.count
+                let n:Int=Int(rand())%data.count
             #endif
             id+=data[n];
         }
@@ -254,51 +253,60 @@ public extension Array where Element : Equatable {
 }
 public extension String {
     public subscript (i: Int) -> Character {
-        return self[self.characters.index(self.startIndex, offsetBy: i)]
+        return self[self.index(self.startIndex, offsetBy: i)]
     }
     public subscript (i: Int) -> String {
         return String(self[i] as Character)
     }
-    public subscript (r: Range<Int>) -> String {
-        let start = characters.index(startIndex, offsetBy: r.lowerBound)
-        let end = characters.index(start, offsetBy: r.count)
+    subscript (r: Range<Int>) -> String {
+        let start = self.index(startIndex, offsetBy: r.lowerBound)
+        let end = self.index(start, offsetBy: r.count)
         return String(self[start..<end])
     }
-    public subscript (r: ClosedRange <Int>) -> String {
-        let start = characters.index(startIndex, offsetBy: r.lowerBound)
-        let end = characters.index(start, offsetBy: r.count-1)
+    subscript (r: ClosedRange <Int>) -> String {
+        let start = self.index(startIndex, offsetBy: r.lowerBound)
+        let end = self.index(start, offsetBy: r.count-1)
         return String(self[start...end])
     }
-    public subscript (r: PartialRangeFrom<Int>) -> String {
-        let start = characters.index(startIndex, offsetBy: r.lowerBound)
-        let end = characters.index(startIndex, offsetBy: self.length-1)
+    subscript (r: PartialRangeFrom<Int>) -> String {
+        let start = self.index(startIndex, offsetBy: r.lowerBound)
+        let end = self.index(startIndex, offsetBy: self.length-1)
         return String(self[start...end])
     }
-    public subscript (r: PartialRangeThrough<Int>) -> String {
+    subscript (r: PartialRangeThrough<Int>) -> String {
         let start = startIndex
-        let end = characters.index(startIndex, offsetBy: min(r.upperBound,self.length-1))
+        let end = self.index(startIndex, offsetBy: min(r.upperBound,self.length-1))
         return String(self[start...end])
     }
-    public subscript (r: PartialRangeUpTo<Int>) -> String {
+    subscript (r: PartialRangeUpTo<Int>) -> String {
         let start = startIndex
-        let end = characters.index(startIndex, offsetBy: min(r.upperBound,self.length))
+        let end = self.index(startIndex, offsetBy: min(r.upperBound,self.length))
         return String(self[start..<end])
     }
-    public var length:Int {
-        return self.characters.count;
+    var length:Int {
+        return self.count;
     }
     public func contains(_ s:String) -> Bool {
         return self.range(of:s) != nil
     }
-    public func matches(_ pattern:String) -> [CountableRange<Int>] {
+    func matches(_ pattern:String) -> [CountableRange<Int>] {
         var ranges=[CountableRange<Int>]()
         do {
             let regex = try NSRegularExpression(pattern: pattern, options: [])
-            ranges = regex.matches(in: self, options: [], range: NSMakeRange(0, self.characters.count)).map {CountableRange(Range($0.range)!)}
+            ranges = regex.matches(in: self, options: [], range: NSMakeRange(0, self.count)).map { Range($0.range)! }
         } catch {
             ranges = []
         }
         return ranges
+    }
+    func matches(regex:String) -> [String] {
+        do {
+            let regex = try NSRegularExpression(pattern:regex, options: [])
+            let ranges = regex.matches(in: self, options: [], range: NSMakeRange(0, self.count)).map { Range($0.range)! }
+            return ranges.map { self[$0.lowerBound..<$0.upperBound] }
+        } catch {
+        }
+        return [String]()
     }
     public func split(_ pattern:String) -> [String] {
         return self.components(separatedBy: pattern)
@@ -310,20 +318,56 @@ public extension String {
     public func trim() -> String {
         return self.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
-    public func indexOf(_ s: String) -> Int? {
+    func indexOf(_ s: String) -> Int? {
         if let r: Range<Index> = self.range(of: s) {
-            return self.characters.distance(from: self.startIndex, to: r.lowerBound)
+            return self.distance(from: self.startIndex, to: r.lowerBound)
         }
         return nil
     }
-    public func lastIndexOf(_ s: String) -> Int? {
+    func lastIndexOf(_ s: String) -> Int? {
         if let r: Range<Index> = self.range(of: s, options: .backwards) {
-            return self.characters.distance(from: self.startIndex, to: r.lowerBound)
+            return self.distance(from: self.startIndex, to: r.lowerBound)
         }
         return nil
     }
-    public var urlEncoded : String? {
+    var urlEncoded : String? {  // deprecated
+        return self.encodedURI
+    }
+    var encodedURI : String? {
         return self.addingPercentEncoding(withAllowedCharacters:.urlQueryAllowed)
+    }
+    var encodedURIComponent : String? {
+        var characters = NSCharacterSet.urlQueryAllowed
+        characters.remove(charactersIn: "&")
+        guard let encodedString = self.addingPercentEncoding(withAllowedCharacters:characters) else {
+            return nil
+        }
+        return encodedString
+    }
+    func dataFromHex() -> Data? {
+        var data = Data(capacity: self.count / 2)
+        let regex = try! NSRegularExpression(pattern: "[0-9a-f]{1,2}", options: .caseInsensitive)
+        regex.enumerateMatches(in: self, range: NSMakeRange(0, utf16.count)) { match, flags, stop in
+            let byteString = (self as NSString).substring(with: match!.range)
+            var num = UInt8(byteString, radix: 16)!
+            data.append(&num, count: 1)
+        }
+        
+        guard data.count > 0 else { return nil }
+        
+        return data
+    }
+    public enum Regex {
+        case number
+        case frenchWords
+    }
+    public static func regex(type:Regex) -> String {
+        switch type {
+        case .number:
+            return "(^|\\s)([0-9]+)($|\\s)"
+        case .frenchWords:
+            return "[a-zA-Z0-9àâäèéêëîïôœùûüÿçÀÂÄÈÉÊËÎÏÔŒÙÛÜŸÇ]+"
+        }
     }
     public var parentPath : String? {
         if self.length>1 {

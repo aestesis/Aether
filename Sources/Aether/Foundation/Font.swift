@@ -26,7 +26,7 @@ import Foundation
     import CoreGraphics
     import UIKit
 #else
-    import Cfreetype
+    import CFreeType
     import CPango
 #endif
 
@@ -528,11 +528,11 @@ import Foundation
     }
 #else
     public class Font : NodeUI {
-        static var fmap : OpaquePointer?
-        static var families=[String:OpaquePointer]()
-        var context : OpaquePointer?
-        var font:OpaquePointer?
-        var metrics:OpaquePointer?
+        static var fmap : UnsafeMutablePointer<PangoFontMap>?
+        static var families=[String:UnsafeMutablePointer<PangoFontFamily>?]()  
+        var context : UnsafeMutablePointer<PangoContext>?
+        var font:UnsafeMutablePointer<PangoFont>?
+        var metrics:UnsafeMutablePointer<PangoFontMetrics>?
         public let name:String
         public var familly:String {
             return ""
@@ -656,7 +656,7 @@ import Foundation
             // #define PANGO_RENDER_TYPE_FC "PangoRenderFc"
             if fmap == nil {
                 fmap = pango_ft2_font_map_new ()
-                var families:UnsafeMutablePointer<OpaquePointer?>?
+                var families:UnsafeMutablePointer<UnsafeMutablePointer<PangoFontFamily>?>?
                 var nfam:Int32 = 0
                 pango_font_map_list_families(fmap,&families,&nfam)
                 for i in 0..<Int(nfam) {
